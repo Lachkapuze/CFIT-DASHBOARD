@@ -129,6 +129,9 @@ function renderApp() {
         <li class="nav-item ${app.currentPage === 'financeiro' ? 'active' : ''}" data-page="financeiro">
           <span>💰</span> Financeiro
         </li>
+        <li class="nav-item ${app.currentPage === 'despesas' ? 'active' : ''}" data-page="despesas">
+  <span>📉</span> Despesas
+</li>
       </ul>
     </div>
 
@@ -166,6 +169,9 @@ function renderApp() {
     case 'financeiro':
       html += renderFinanceiro();
       break;
+      case 'despesas':
+  html += renderDespesas();
+  break;
     default:
       html += renderDashboard();
   }
@@ -631,6 +637,89 @@ function renderFinanceiro() {
     </div>
   `;
 }
+
+function renderDespesas() {
+  return `
+    <h2>Despesas</h2>
+
+    <div class="grid grid-2" style="margin-top: 2rem;">
+
+      <!-- Formulário -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title" id="despesa-form-title">Nova Despesa</h3>
+        </div>
+
+        <div class="card-content">
+          <form id="despesa-form">
+            <input type="hidden" id="despesa-id">
+
+            <div class="form-group">
+              <label class="form-label">Descrição</label>
+              <input class="form-input" id="despesa-descricao" placeholder="Ex: Compra no atacado, pagamento funcionário...">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Valor total</label>
+              <input class="form-input" type="number" step="0.01" id="despesa-valor" placeholder="Ex: 250.00">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Data</label>
+              <input class="form-input" type="date" id="despesa-data">
+            </div>
+
+            <div class="flex gap-2">
+              <button class="btn btn-primary btn-block" type="submit" id="despesa-submit-btn">Salvar</button>
+              <button class="btn btn-secondary btn-block" type="button" onclick="resetDespesaForm()">Limpar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Tabela -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Lista de Despesas</h3>
+        </div>
+
+        <div class="card-content">
+          ${
+            app.data.despesas.length === 0
+              ? `<p style="color: var(--text-secondary);">Nenhuma despesa cadastrada.</p>`
+              : `
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Descrição</th>
+                      <th>Valor</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${app.data.despesas.slice().reverse().map(d => `
+                      <tr>
+                        <td>${new Date(d.data).toLocaleDateString('pt-BR')}</td>
+                        <td>${d.descricao}</td>
+                        <td>${formatCurrency(d.valor)}</td>
+                        <td>
+                          <button class="btn btn-small btn-secondary" onclick="editDespesa(${d.id})">Editar</button>
+                          <button class="btn btn-small btn-danger" onclick="deleteDespesa(${d.id})">Excluir</button>
+                        </td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              `
+          }
+        </div>
+      </div>
+
+    </div>
+  `;
+}
+
 
 // ===== Funções de Ação =====
 function addIngrediente() {
