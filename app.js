@@ -190,6 +190,10 @@ function renderApp() {
   if (app.currentPage === 'despesas') {
   setupDespesasPage();
 }
+  if (app.currentPage === 'financeiro') {
+   setupFinanceiroPage();
+}
+
 }
 
 // ===== Páginas =====
@@ -566,80 +570,106 @@ function renderPedidos() {
 }
 
 function renderFinanceiro() {
-  const resumo = calcularResumoFinanceiro();
+  const hoje = new Date();
+  const yyyy = hoje.getFullYear();
+  const mm = String(hoje.getMonth() + 1).padStart(2, '0');
+  const dd = String(hoje.getDate()).padStart(2, '0');
+  const hojeStr = `${yyyy}-${mm}-${dd}`;
 
   return `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-      <h2>Financeiro</h2>
-      <button class="btn btn-primary" onclick="addTransacao()">+ Nova Transação</button>
-    </div>
-    
-    <div class="grid grid-3" style="margin-bottom: 2rem;">
-      <div class="stat-card">
-        <div class="stat-label">Faturamento (Mês)</div>
-        <div class="stat-value">${formatCurrency(resumo.faturamento)}</div>
+    <h2>Financeiro</h2>
+
+    <!-- FILTRO POR PERÍODO -->
+    <div class="card" style="margin-top: 2rem;">
+      <div class="card-header">
+        <h3 class="card-title">Período</h3>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Despesas (Mês)</div>
-        <div class="stat-value">${formatCurrency(resumo.despesas)}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Lucro (Mês)</div>
-        <div class="stat-value">${formatCurrency(resumo.lucro)}</div>
+
+      <div class="card-content">
+        <form id="filtro-financeiro">
+          <div class="grid grid-3">
+            <div class="form-group">
+              <label class="form-label">Data inicial</label>
+              <input type="date" class="form-input" id="data-inicial" value="${yyyy}-${mm}-01">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Data final</label>
+              <input type="date" class="form-input" id="data-final" value="${hojeStr}">
+            </div>
+
+            <div class="form-group" style="margin-top: 1.8rem;">
+              <button class="btn btn-primary btn-block" type="submit">Aplicar</button>
+            </div>
+          </div>
+        </form>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-header">
-        <h3 class="card-title">Transações</h3>
-      </div>
-      ${
-        app.data.financeiro.length === 0
-          ? '<p style="color: var(--text-secondary); padding: 1rem;">Nenhuma transação registrada</p>'
-          : `
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Tipo</th>
-                  <th>Descrição</th>
-                  <th>Valor</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${app.data.financeiro
-                  .slice()
-                  .sort((a, b) => new Date(b.data) - new Date(a.data))
-                  .map(
-                    (t) => `
-                  <tr>
-                    <td>${new Date(t.data).toLocaleDateString('pt-BR')}</td>
-                    <td>
-                      <span class="badge ${
-                        t.tipo === 'receita'
-                          ? 'badge-success'
-                          : 'badge-danger'
-                      }">
-                        ${t.tipo === 'receita' ? 'Receita' : 'Despesa'}
-                      </span>
-                    </td>
-                    <td>${t.descricao || '-'}</td>
-                    <td>${formatCurrency(t.valor)}</td>
-                    <td>
-                      <button class="btn btn-small btn-danger" onclick="deleteTransacao(${t.id})">Deletar</button>
-                    </td>
-                  </tr>
-                `
-                  )
-                  .join('')}
-              </tbody>
-            </table>
-          `
-      }
+    <!-- RESULTADOS -->
+    <div id="financeiro-resultado" style="margin-top: 2rem;">
+      ${renderFinanceiroResultado()}
     </div>
   `;
 }
+function renderFinanceiroResultado() {
+  const { faturamento, despesas, lucro } = calcularFinanceiroFiltrado();
+
+  return `
+    <div class="grid grid-3">
+      <div class="stat-card">
+        <div class="stat-label">Faturamento</div>
+        <div class="stat-value">${formatCurrency(faturamento)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Despesas</div>
+        <div class="stat-value">${formatCurrency(despesas)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Lucro</div>
+        <div class="stat-value">${formatCurrency(lucro)}</div>
+      </div>
+    </div>
+  `;
+}
+function calcularFinanceiroFiltrado() {
+  const ini = document.getElementById('data-inicial')?.value;
+  const fim = document.getElementById('data-final')?.value;
+
+  if (!ini || !fim) {
+    return { faturamento: 0, despesas: 0, lucro: 0 };
+  }
+
+  const dataIni = new Date(ini + 'T00:00:00');
+  const dataFim = new Date(fim + 'T23:59:59');
+
+  // FATURAMENTO (quando pedidos existirão)
+  let faturamento = 0;
+  if (Array.isArray(app.data.pedidos)) {
+    faturamento = app.data.pedidos
+      .filter(p => {
+        const d = new Date(p.data);
+        return d >= dataIni && d <= dataFim;
+      })
+      .reduce((t, p) => t + (p.valor || 0), 0);
+  }
+
+  // DESPESAS
+  let despesas = 0;
+  if (Array.isArray(app.data.despesas)) {
+    despesas = app.data.despesas
+      .filter(d => {
+        const data = new Date(d.data);
+        return data >= dataIni && data <= dataFim;
+      })
+      .reduce((t, d) => t + d.valor, 0);
+  }
+
+  const lucro = faturamento - despesas;
+
+  return { faturamento, despesas, lucro };
+}
+
 
 function renderDespesas() {
   return `
@@ -848,6 +878,18 @@ function deleteDespesa(id) {
   app.data.despesas = app.data.despesas.filter(d => d.id !== id);
   saveData();
   renderApp();
+}
+function setupFinanceiroPage() {
+  const form = document.getElementById('filtro-financeiro');
+  if (!form) return;
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const container = document.getElementById('financeiro-resultado');
+    if (container) {
+      container.innerHTML = renderFinanceiroResultado();
+    }
+  });
 }
 
 
