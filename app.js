@@ -199,7 +199,9 @@ function renderApp() {
   if (app.currentPage === 'clientes') {
   setupClientesPage();
 }
-
+  if (app.currentPage === 'dashboard') {
+    setupDashboardPage();
+  }
 
   function setupPedidosPage() {
   const form = document.getElementById('pedido-form');
@@ -277,64 +279,100 @@ function resetPedidoForm() {
 function renderDashboard() {
   const resumo = calcularResumoFinanceiro();
 
+  const hoje = new Date();
+  const yyyy = hoje.getFullYear();
+  const mm = String(hoje.getMonth() + 1).padStart(2, '0');
+  const dd = String(hoje.getDate()).padStart(2, '0');
+  const hojeStr = `${yyyy}-${mm}-${dd}`;
+  const inicioMesStr = `${yyyy}-${mm}-01`;
+
+  // Pedidos do dia
+  const pedidosHoje = Array.isArray(app.data.pedidos)
+    ? app.data.pedidos
+        .filter(p => {
+          if (!p.data) return false;
+          const d = new Date(p.data);
+          return (
+            d.getFullYear() === hoje.getFullYear() &&
+            d.getMonth() === hoje.getMonth() &&
+            d.getDate() === hoje.getDate()
+          );
+        })
+        .reverse()
+    : [];
+
   return `
     <h2>Dashboard</h2>
-    <div class="grid grid-4" style="margin-top: 2rem;">
-      <div class="stat-card">
-        <div class="stat-label">Faturamento (Mês)</div>
-        <div class="stat-value">${formatCurrency(resumo.faturamento)}</div>
+
+    <!-- FILTRO POR PERÍODO DO DASHBOARD -->
+    <div class="card" style="margin-top: 2rem;">
+      <div class="card-header">
+        <h3 class="card-title">Período do Dashboard</h3>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Despesas (Mês)</div>
-        <div class="stat-value">${formatCurrency(resumo.despesas)}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Lucro (Mês)</div>
-        <div class="stat-value">${formatCurrency(resumo.lucro)}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Clientes</div>
-        <div class="stat-value">${app.data.clientes.length}</div>
+
+      <div class="card-content">
+        <form id="filtro-dashboard">
+          <div class="grid grid-3">
+            <div class="form-group">
+              <label class="form-label">Data inicial</label>
+              <input type="date" class="form-input" id="dashboard-data-inicial" value="${inicioMesStr}">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Data final</label>
+              <input type="date" class="form-input" id="dashboard-data-final" value="${hojeStr}">
+            </div>
+
+            <div class="form-group" style="margin-top: 1.8rem;">
+              <button class="btn btn-primary btn-block" type="submit">Aplicar</button>
+            </div>
+          </div>
+        </form>
       </div>
     </div>
 
+    <!-- RESUMO DO PERÍODO -->
+    <div id="dashboard-resumo" style="margin-top: 2rem;">
+      ${renderDashboardResumo(resumo)}
+    </div>
+
     <div class="grid grid-2" style="margin-top: 2rem;">
+      <!-- Pedidos do dia -->
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title">Pedidos Recentes</h3>
+          <h3 class="card-title">Pedidos do dia</h3>
         </div>
         <div class="card-content">
           ${
-            app.data.pedidos.length === 0
-              ? '<p style="color: var(--text-secondary);">Nenhum pedido registrado</p>'
-              : app.data.pedidos
-                  .slice(-5)
-                  .reverse()
-                  .map(
-                    (p) =>
-                      `<p>${p.cliente} - ${formatCurrency(p.valor)} (${new Date(
-                        p.data
-                      ).toLocaleDateString('pt-BR')})</p>`
-                  )
+            pedidosHoje.length === 0
+              ? '<p style="color: var(--text-secondary);">Nenhum pedido hoje.</p>'
+              : pedidosHoje
+                  .map(p => `
+                    <p>${p.clienteNome} - ${formatCurrency(p.valor)} (${new Date(p.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })})</p>
+                  `)
                   .join('')
           }
         </div>
       </div>
 
+      <!-- Estoque baixo -->
       <div class="card">
         <div class="card-header">
           <h3 class="card-title">Estoque Baixo</h3>
         </div>
         <div class="card-content">
           ${
-            app.data.ingredientes.filter((i) => i.quantidade < 2).length === 0
+            app.data.ingredientes.filter(i => {
+              const minimo = i.quantidadeMinima || 0;
+              return minimo > 0 && i.quantidade <= minimo;
+            }).length === 0
               ? '<p style="color: var(--text-secondary);">Estoque OK</p>'
               : app.data.ingredientes
-                  .filter((i) => i.quantidade < 2)
-                  .map(
-                    (i) =>
-                      `<p>${i.nome}: ${i.quantidade} ${i.unidade}</p>`
-                  )
+                  .filter(i => {
+                    const minimo = i.quantidadeMinima || 0;
+                    return minimo > 0 && i.quantidade <= minimo;
+                  })
+                  .map(i => `<p>${i.nome}: ${i.quantidade} ${i.unidade}</p>`)
                   .join('')
           }
         </div>
@@ -342,6 +380,42 @@ function renderDashboard() {
     </div>
   `;
 }
+
+function renderDashboardResumo(resumo) {
+  return `
+    <div class="grid grid-3">
+      <div class="stat-card stat-faturamento">
+        <div class="stat-label">Faturamento</div>
+        <div class="stat-value">${formatCurrency(resumo.faturamento)}</div>
+      </div>
+      <div class="stat-card stat-despesas">
+        <div class="stat-label">Despesas</div>
+        <div class="stat-value">${formatCurrency(resumo.despesas)}</div>
+      </div>
+      <div class="stat-card stat-lucro">
+        <div class="stat-label">Lucro</div>
+        <div class="stat-value">${formatCurrency(resumo.lucro)}</div>
+      </div>
+    </div>
+  `;
+}
+
+function setupDashboardPage() {
+  const form = document.getElementById('filtro-dashboard');
+  if (!form) return;
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const ini = document.getElementById('dashboard-data-inicial')?.value;
+    const fim = document.getElementById('dashboard-data-final')?.value;
+    const resumo = calcularResumoPeriodo(ini, fim);
+    const container = document.getElementById('dashboard-resumo');
+    if (container) {
+      container.innerHTML = renderDashboardResumo(resumo);
+    }
+  });
+}
+
 
 function renderEstoque() {
   return `
@@ -801,28 +875,28 @@ function renderFinanceiroResultado() {
 
   return `
     <div class="grid grid-3">
-      <div class="stat-card">
+      <div class="stat-card stat-faturamento">
         <div class="stat-label">Faturamento</div>
         <div class="stat-value">${formatCurrency(faturamento)}</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-despesas">
         <div class="stat-label">Despesas</div>
         <div class="stat-value">${formatCurrency(despesas)}</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-lucro">
         <div class="stat-label">Lucro</div>
         <div class="stat-value">${formatCurrency(lucro)}</div>
       </div>
     </div>
   `;
 }
+
 function calcularFinanceiroFiltrado() {
   const ini = document.getElementById('data-inicial')?.value;
   const fim = document.getElementById('data-final')?.value;
+  return calcularResumoPeriodo(ini, fim);
+}
 
-  if (!ini || !fim) {
-    return { faturamento: 0, despesas: 0, lucro: 0 };
-  }
 
   const dataIni = new Date(ini + 'T00:00:00');
   const dataFim = new Date(fim + 'T23:59:59');
@@ -1352,26 +1426,52 @@ function formatCurrency(value) {
   }).format(value || 0);
 }
 
-function calcularResumoFinanceiro() {
-  const agora = new Date();
-  const mesAtual = agora.getMonth();
-  const anoAtual = agora.getFullYear();
+function calcularResumoPeriodo(ini, fim) {
+  if (!ini || !fim) {
+    return { faturamento: 0, despesas: 0, lucro: 0 };
+  }
 
+  const dataIni = new Date(ini + 'T00:00:00');
+  const dataFim = new Date(fim + 'T23:59:59');
+
+  // FATURAMENTO = soma dos pedidos no período
   let faturamento = 0;
-  let despesas = 0;
+  if (Array.isArray(app.data.pedidos)) {
+    faturamento = app.data.pedidos
+      .filter(p => {
+        if (!p.data) return false;
+        const d = new Date(p.data);
+        return d >= dataIni && d <= dataFim;
+      })
+      .reduce((t, p) => t + (p.valor || 0), 0);
+  }
 
-  app.data.financeiro.forEach((t) => {
-    const d = new Date(t.data);
-    if (d.getMonth() === mesAtual && d.getFullYear() === anoAtual) {
-      if (t.tipo === 'receita') {
-        faturamento += t.valor;
-      } else if (t.tipo === 'despesa') {
-        despesas += t.valor;
-      }
-    }
-  });
+  // DESPESAS = soma das despesas no período
+  let despesas = 0;
+  if (Array.isArray(app.data.despesas)) {
+    despesas = app.data.despesas
+      .filter(d => {
+        if (!d.data) return false;
+        const data = new Date(d.data);
+        return data >= dataIni && data <= dataFim;
+      })
+      .reduce((t, d) => t + (d.valor || 0), 0);
+  }
 
   const lucro = faturamento - despesas;
-
   return { faturamento, despesas, lucro };
 }
+
+
+function calcularResumoFinanceiro() {
+  const hoje = new Date();
+  const yyyy = hoje.getFullYear();
+  const mm = String(hoje.getMonth() + 1).padStart(2, '0');
+  const dd = String(hoje.getDate()).padStart(2, '0');
+
+  const inicioMes = `${yyyy}-${mm}-01`;
+  const hojeStr = `${yyyy}-${mm}-${dd}`;
+
+  return calcularResumoPeriodo(inicioMes, hojeStr);
+}
+
