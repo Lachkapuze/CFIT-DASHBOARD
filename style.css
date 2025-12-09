@@ -572,12 +572,24 @@ a:hover {
   background: rgba(59, 130, 246, 0.06);
 }
 
+.stat-card.stat-faturamento .stat-value {
+  color: #3b82f6;
+}
+
 .stat-card.stat-despesas {
   border-left: 4px solid #ef4444;
   background: rgba(239, 68, 68, 0.06);
 }
 
+.stat-card.stat-despesas .stat-value {
+  color: #ef4444;
+}
+
 .stat-card.stat-lucro {
   border-left: 4px solid #22c55e;
   background: rgba(34, 197, 94, 0.06);
+}
+
+.stat-card.stat-lucro .stat-value {
+  color: #22c55e;
 }
