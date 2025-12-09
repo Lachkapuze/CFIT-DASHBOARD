@@ -13,7 +13,8 @@ const app = {
     receitas: [],
     pedidos: [],
     kits: [],
-    cardapio: []
+    cardapio: [],
+    financeiro: [] // <- NOVO: transações financeiras
   }
 };
 
@@ -28,6 +29,11 @@ function initializeApp() {
   const savedData = localStorage.getItem('cfit-data');
   if (savedData) {
     app.data = JSON.parse(savedData);
+  }
+
+  // Garantir que campo financeiro exista mesmo em dados antigos
+  if (!app.data.financeiro) {
+    app.data.financeiro = [];
   }
 
   // Inicializar dados de exemplo
@@ -58,6 +64,9 @@ function initializeSampleData() {
     { id: 1, nome: 'João Silva', telefone: '11999999999', endereco: 'Rua A, 123' },
   ];
 
+  // Financeiro de exemplo (opcional – pode deixar vazio se quiser)
+  app.data.financeiro = [];
+
   saveData();
 }
 
@@ -77,16 +86,16 @@ function setupEventListeners() {
 // ===== Renderização =====
 function renderApp() {
   const root = document.getElementById('root');
-  
+
   let html = `
     <div class="sidebar">
       <div class="logo" style="padding: 0 1.5rem; margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem;">
-  <img src="logo.png" alt="CFIT Logo" style="width: 40px; height: 40px; object-fit: contain; border-radius: 4px;">
-  <div>
-    <div style="font-weight: 700;">CFIT</div>
-    <div style="font-size: 0.75rem; color: var(--text-secondary);">Marmitas</div>
-  </div>
-</div>
+        <img src="logo.png" alt="CFIT Logo" style="width: 40px; height: 40px; object-fit: contain; border-radius: 4px;">
+        <div>
+          <div style="font-weight: 700;">CFIT</div>
+          <div style="font-size: 0.75rem; color: var(--text-secondary);">Marmitas</div>
+        </div>
+      </div>
       <ul class="nav-menu">
         <li class="nav-item ${app.currentPage === 'dashboard' ? 'active' : ''}" data-page="dashboard">
           <span>📊</span> Dashboard
@@ -161,20 +170,22 @@ function renderApp() {
 
 // ===== Páginas =====
 function renderDashboard() {
+  const resumo = calcularResumoFinanceiro();
+
   return `
     <h2>Dashboard</h2>
     <div class="grid grid-4" style="margin-top: 2rem;">
       <div class="stat-card">
-        <div class="stat-label">Faturamento</div>
-        <div class="stat-value">R$ 0,00</div>
+        <div class="stat-label">Faturamento (Mês)</div>
+        <div class="stat-value">${formatCurrency(resumo.faturamento)}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Despesas</div>
-        <div class="stat-value">R$ 0,00</div>
+        <div class="stat-label">Despesas (Mês)</div>
+        <div class="stat-value">${formatCurrency(resumo.despesas)}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Lucro</div>
-        <div class="stat-value">R$ 0,00</div>
+        <div class="stat-label">Lucro (Mês)</div>
+        <div class="stat-value">${formatCurrency(resumo.lucro)}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Clientes</div>
@@ -188,9 +199,19 @@ function renderDashboard() {
           <h3 class="card-title">Pedidos Recentes</h3>
         </div>
         <div class="card-content">
-          ${app.data.pedidos.length === 0 
-            ? '<p style="color: var(--text-secondary);">Nenhum pedido registrado</p>'
-            : app.data.pedidos.map(p => `<p>${p.cliente} - R$ ${p.valor.toFixed(2)}</p>`).join('')
+          ${
+            app.data.pedidos.length === 0
+              ? '<p style="color: var(--text-secondary);">Nenhum pedido registrado</p>'
+              : app.data.pedidos
+                  .slice(-5)
+                  .reverse()
+                  .map(
+                    (p) =>
+                      `<p>${p.cliente} - ${formatCurrency(p.valor)} (${new Date(
+                        p.data
+                      ).toLocaleDateString('pt-BR')})</p>`
+                  )
+                  .join('')
           }
         </div>
       </div>
@@ -200,11 +221,16 @@ function renderDashboard() {
           <h3 class="card-title">Estoque Baixo</h3>
         </div>
         <div class="card-content">
-          ${app.data.ingredientes.filter(i => i.quantidade < 2).length === 0
-            ? '<p style="color: var(--text-secondary);">Estoque OK</p>'
-            : app.data.ingredientes.filter(i => i.quantidade < 2).map(i => 
-                `<p>${i.nome}: ${i.quantidade} ${i.unidade}</p>`
-              ).join('')
+          ${
+            app.data.ingredientes.filter((i) => i.quantidade < 2).length === 0
+              ? '<p style="color: var(--text-secondary);">Estoque OK</p>'
+              : app.data.ingredientes
+                  .filter((i) => i.quantidade < 2)
+                  .map(
+                    (i) =>
+                      `<p>${i.nome}: ${i.quantidade} ${i.unidade}</p>`
+                  )
+                  .join('')
           }
         </div>
       </div>
@@ -231,18 +257,22 @@ function renderEstoque() {
           </tr>
         </thead>
         <tbody>
-          ${app.data.ingredientes.map(ing => `
+          ${app.data.ingredientes
+            .map(
+              (ing) => `
             <tr>
               <td>${ing.nome}</td>
               <td>${ing.unidade}</td>
               <td>${ing.quantidade}</td>
-              <td>R$ ${ing.precoUnitario.toFixed(2)}</td>
+              <td>${formatCurrency(ing.precoUnitario)}</td>
               <td>
                 <button class="btn btn-small btn-secondary" onclick="editIngrediente(${ing.id})">Editar</button>
                 <button class="btn btn-small btn-danger" onclick="deleteIngrediente(${ing.id})">Deletar</button>
               </td>
             </tr>
-          `).join('')}
+          `
+            )
+            .join('')}
         </tbody>
       </table>
     </div>
@@ -257,18 +287,22 @@ function renderReceitas() {
     </div>
 
     <div class="grid grid-3">
-      ${app.data.receitas.map(rec => `
+      ${app.data.receitas
+        .map(
+          (rec) => `
         <div class="card">
           <div class="card-header">
             <h3 class="card-title">${rec.nome}</h3>
           </div>
           <div class="card-content">
-            <p><strong>Preço:</strong> R$ ${rec.preco.toFixed(2)}</p>
+            <p><strong>Preço:</strong> ${formatCurrency(rec.preco)}</p>
             <button class="btn btn-small btn-secondary btn-block" onclick="editReceita(${rec.id})">Editar</button>
             <button class="btn btn-small btn-danger btn-block" onclick="deleteReceita(${rec.id})">Deletar</button>
           </div>
         </div>
-      `).join('')}
+      `
+        )
+        .join('')}
     </div>
   `;
 }
@@ -279,7 +313,9 @@ function renderKits() {
     <p style="color: var(--text-secondary); margin-bottom: 2rem;">Configure seus 6 kits de cardápio (segunda a domingo)</p>
 
     <div class="grid grid-2">
-      ${[1, 2, 3, 4, 5, 6].map(num => `
+      ${[1, 2, 3, 4, 5, 6]
+        .map(
+          (num) => `
         <div class="card">
           <div class="card-header">
             <h3 class="card-title">Kit ${num}</h3>
@@ -288,7 +324,9 @@ function renderKits() {
             <button class="btn btn-primary btn-block" onclick="editKit(${num})">Configurar</button>
           </div>
         </div>
-      `).join('')}
+      `
+        )
+        .join('')}
     </div>
   `;
 }
@@ -311,7 +349,9 @@ function renderClientes() {
           </tr>
         </thead>
         <tbody>
-          ${app.data.clientes.map(cli => `
+          ${app.data.clientes
+            .map(
+              (cli) => `
             <tr>
               <td>${cli.nome}</td>
               <td>${cli.telefone}</td>
@@ -321,7 +361,9 @@ function renderClientes() {
                 <button class="btn btn-small btn-danger" onclick="deleteCliente(${cli.id})">Deletar</button>
               </td>
             </tr>
-          `).join('')}
+          `
+            )
+            .join('')}
         </tbody>
       </table>
     </div>
@@ -347,20 +389,25 @@ function renderPedidos() {
           </tr>
         </thead>
         <tbody>
-          ${app.data.pedidos.length === 0 
-            ? '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">Nenhum pedido registrado</td></tr>'
-            : app.data.pedidos.map(ped => `
+          ${
+            app.data.pedidos.length === 0
+              ? '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">Nenhum pedido registrado</td></tr>'
+              : app.data.pedidos
+                  .map(
+                    (ped) => `
               <tr>
                 <td>${ped.cliente}</td>
                 <td>${new Date(ped.data).toLocaleDateString('pt-BR')}</td>
-                <td>R$ ${ped.valor.toFixed(2)}</td>
+                <td>${formatCurrency(ped.valor)}</td>
                 <td><span class="badge badge-primary">${ped.status}</span></td>
                 <td>
                   <button class="btn btn-small btn-secondary" onclick="editPedido(${ped.id})">Editar</button>
                   <button class="btn btn-small btn-danger" onclick="deletePedido(${ped.id})">Deletar</button>
                 </td>
               </tr>
-            `).join('')
+            `
+                  )
+                  .join('')
           }
         </tbody>
       </table>
@@ -369,21 +416,26 @@ function renderPedidos() {
 }
 
 function renderFinanceiro() {
+  const resumo = calcularResumoFinanceiro();
+
   return `
-    <h2>Financeiro</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+      <h2>Financeiro</h2>
+      <button class="btn btn-primary" onclick="addTransacao()">+ Nova Transação</button>
+    </div>
     
     <div class="grid grid-3" style="margin-bottom: 2rem;">
       <div class="stat-card">
         <div class="stat-label">Faturamento (Mês)</div>
-        <div class="stat-value">R$ 0,00</div>
+        <div class="stat-value">${formatCurrency(resumo.faturamento)}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Despesas (Mês)</div>
-        <div class="stat-value">R$ 0,00</div>
+        <div class="stat-value">${formatCurrency(resumo.despesas)}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Lucro (Mês)</div>
-        <div class="stat-value">R$ 0,00</div>
+        <div class="stat-value">${formatCurrency(resumo.lucro)}</div>
       </div>
     </div>
 
@@ -391,7 +443,50 @@ function renderFinanceiro() {
       <div class="card-header">
         <h3 class="card-title">Transações</h3>
       </div>
-      <p style="color: var(--text-secondary);">Nenhuma transação registrada</p>
+      ${
+        app.data.financeiro.length === 0
+          ? '<p style="color: var(--text-secondary); padding: 1rem;">Nenhuma transação registrada</p>'
+          : `
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Tipo</th>
+                  <th>Descrição</th>
+                  <th>Valor</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${app.data.financeiro
+                  .slice()
+                  .sort((a, b) => new Date(b.data) - new Date(a.data))
+                  .map(
+                    (t) => `
+                  <tr>
+                    <td>${new Date(t.data).toLocaleDateString('pt-BR')}</td>
+                    <td>
+                      <span class="badge ${
+                        t.tipo === 'receita'
+                          ? 'badge-success'
+                          : 'badge-danger'
+                      }">
+                        ${t.tipo === 'receita' ? 'Receita' : 'Despesa'}
+                      </span>
+                    </td>
+                    <td>${t.descricao || '-'}</td>
+                    <td>${formatCurrency(t.valor)}</td>
+                    <td>
+                      <button class="btn btn-small btn-danger" onclick="deleteTransacao(${t.id})">Deletar</button>
+                    </td>
+                  </tr>
+                `
+                  )
+                  .join('')}
+              </tbody>
+            </table>
+          `
+      }
     </div>
   `;
 }
@@ -407,7 +502,7 @@ function editIngrediente(id) {
 
 function deleteIngrediente(id) {
   if (confirm('Deletar este ingrediente?')) {
-    app.data.ingredientes = app.data.ingredientes.filter(i => i.id !== id);
+    app.data.ingredientes = app.data.ingredientes.filter((i) => i.id !== id);
     saveData();
     renderApp();
   }
@@ -423,7 +518,7 @@ function editReceita(id) {
 
 function deleteReceita(id) {
   if (confirm('Deletar esta receita?')) {
-    app.data.receitas = app.data.receitas.filter(r => r.id !== id);
+    app.data.receitas = app.data.receitas.filter((r) => r.id !== id);
     saveData();
     renderApp();
   }
@@ -443,7 +538,7 @@ function editCliente(id) {
 
 function deleteCliente(id) {
   if (confirm('Deletar este cliente?')) {
-    app.data.clientes = app.data.clientes.filter(c => c.id !== id);
+    app.data.clientes = app.data.clientes.filter((c) => c.id !== id);
     saveData();
     renderApp();
   }
@@ -459,7 +554,57 @@ function editPedido(id) {
 
 function deletePedido(id) {
   if (confirm('Deletar este pedido?')) {
-    app.data.pedidos = app.data.pedidos.filter(p => p.id !== id);
+    app.data.pedidos = app.data.pedidos.filter((p) => p.id !== id);
+    saveData();
+    renderApp();
+  }
+}
+
+// ===== Financeiro: ações =====
+function addTransacao() {
+  const tipoRaw = prompt('Tipo de transação: digite R para Receita ou D para Despesa');
+  if (!tipoRaw) return;
+
+  const tipo =
+    tipoRaw.trim().toLowerCase() === 'r'
+      ? 'receita'
+      : tipoRaw.trim().toLowerCase() === 'd'
+      ? 'despesa'
+      : null;
+
+  if (!tipo) {
+    alert('Tipo inválido. Use R para Receita ou D para Despesa.');
+    return;
+  }
+
+  const valorRaw = prompt('Valor (use ponto para centavos, ex: 150.50):');
+  if (!valorRaw) return;
+
+  const valor = parseFloat(valorRaw.replace(',', '.'));
+  if (isNaN(valor) || valor <= 0) {
+    alert('Valor inválido.');
+    return;
+  }
+
+  const descricao = prompt('Descrição (ex: Compra de frango, Venda de kits, etc):') || '';
+
+  const hoje = new Date();
+  const transacao = {
+    id: Date.now(),
+    tipo,
+    valor,
+    descricao,
+    data: hoje.toISOString()
+  };
+
+  app.data.financeiro.push(transacao);
+  saveData();
+  renderApp();
+}
+
+function deleteTransacao(id) {
+  if (confirm('Deseja deletar esta transação?')) {
+    app.data.financeiro = app.data.financeiro.filter((t) => t.id !== id);
     saveData();
     renderApp();
   }
@@ -474,5 +619,29 @@ function formatCurrency(value) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
-  }).format(value);
+  }).format(value || 0);
+}
+
+function calcularResumoFinanceiro() {
+  const agora = new Date();
+  const mesAtual = agora.getMonth();
+  const anoAtual = agora.getFullYear();
+
+  let faturamento = 0;
+  let despesas = 0;
+
+  app.data.financeiro.forEach((t) => {
+    const d = new Date(t.data);
+    if (d.getMonth() === mesAtual && d.getFullYear() === anoAtual) {
+      if (t.tipo === 'receita') {
+        faturamento += t.valor;
+      } else if (t.tipo === 'despesa') {
+        despesas += t.valor;
+      }
+    }
+  });
+
+  const lucro = faturamento - despesas;
+
+  return { faturamento, despesas, lucro };
 }
