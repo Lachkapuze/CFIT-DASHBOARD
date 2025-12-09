@@ -87,7 +87,6 @@ function renderApp() {
     <div style="font-size: 0.75rem; color: var(--text-secondary);">Marmitas</div>
   </div>
 </div>
-
       <ul class="nav-menu">
         <li class="nav-item ${app.currentPage === 'dashboard' ? 'active' : ''}" data-page="dashboard">
           <span>📊</span> Dashboard
@@ -113,14 +112,13 @@ function renderApp() {
       </ul>
     </div>
 
-    <div class="header">
-  <h1>CFIT - Sistema de Gestão de Marmitas</h1>
-  <div style="text-align: right;">
-    <p style="margin: 0; color: var(--text-secondary);">Bem-vindo!</p>
-  </div>
-</div>
-
-
+    <div class="main-content">
+      <div class="header">
+        <h1>CFIT - Sistema de Gestão de Marmitas</h1>
+        <div style="text-align: right;">
+          <p style="margin: 0; color: var(--text-secondary);">Bem-vindo!</p>
+        </div>
+      </div>
 
       <div class="container" style="margin-top: 2rem;">
   `;
