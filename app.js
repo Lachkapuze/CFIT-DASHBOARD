@@ -25,7 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initializeApp() {
-  // Carregar dados do localStorage
   const savedData = localStorage.getItem('cfit-data');
 
   if (savedData) {
@@ -36,26 +35,31 @@ function initializeApp() {
       initializeSampleData();
     }
   } else {
-    // Se não tiver nada salvo ainda, cria os dados de exemplo
     initializeSampleData();
   }
 
-  // Garante que o campo financeiro exista mesmo em dados antigos
-  if (!app.data.financeiro) {
-    app.data.financeiro = [];
-  }
+  // Garante campos novos em dados antigos
+  if (!app.data.financeiro) app.data.financeiro = [];
+  if (!app.data.despesas) app.data.despesas = [];
+  if (!Array.isArray(app.data.ingredientes)) app.data.ingredientes = [];
 
-  // Configurar event listeners
+  app.data.ingredientes.forEach(i => {
+    if (typeof i.quantidadeMinima !== 'number') {
+      i.quantidadeMinima = 0;
+    }
+  });
+
   setupEventListeners();
 }
 
 
+
 function initializeSampleData() {
-  // Ingredientes de exemplo
+  // Ingredientes de exemplo (Estoque)
   app.data.ingredientes = [
-    { id: 1, nome: 'Arroz', unidade: 'kg', quantidade: 5, precoUnitario: 5.50 },
-    { id: 2, nome: 'Frango', unidade: 'kg', quantidade: 3, precoUnitario: 15.00 },
-    { id: 3, nome: 'Brócolis', unidade: 'kg', quantidade: 2, precoUnitario: 4.50 },
+    { id: 1, nome: 'Arroz', unidade: 'kg', quantidade: 5, quantidadeMinima: 2, precoUnitario: 5.50 },
+    { id: 2, nome: 'Frango', unidade: 'kg', quantidade: 3, quantidadeMinima: 1, precoUnitario: 15.00 },
+    { id: 3, nome: 'Brócolis', unidade: 'kg', quantidade: 2, quantidadeMinima: 1, precoUnitario: 4.50 },
   ];
 
   // Receitas de exemplo
@@ -69,11 +73,13 @@ function initializeSampleData() {
     { id: 1, nome: 'João Silva', telefone: '11999999999', endereco: 'Rua A, 123' },
   ];
 
-  // Financeiro começa vazio
-  app.data.financeiro = [];
+  // Despesas / Financeiro começam vazios (se você já tiver, mantém)
+  if (!app.data.despesas) app.data.despesas = [];
+  if (!app.data.financeiro) app.data.financeiro = [];
 
   saveData();
 }
+
 
 function setupEventListeners() {
   // Navegar entre páginas
@@ -171,6 +177,10 @@ function renderApp() {
 
   root.innerHTML = html;
   setupEventListeners();
+    // Inicializa comportamentos específicos da página atual
+  if (app.currentPage === 'estoque') {
+    setupEstoquePage();
+  }
 }
 
 // ===== Páginas =====
@@ -245,44 +255,170 @@ function renderDashboard() {
 
 function renderEstoque() {
   return `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-      <h2>Estoque</h2>
-      <button class="btn btn-primary" onclick="addIngrediente()">+ Novo Item</button>
-    </div>
+    <h2>Estoque</h2>
 
-    <div class="card">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Unidade</th>
-            <th>Quantidade</th>
-            <th>Preço Unit.</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${app.data.ingredientes
-            .map(
-              (ing) => `
-            <tr>
-              <td>${ing.nome}</td>
-              <td>${ing.unidade}</td>
-              <td>${ing.quantidade}</td>
-              <td>${formatCurrency(ing.precoUnitario)}</td>
-              <td>
-                <button class="btn btn-small btn-secondary" onclick="editIngrediente(${ing.id})">Editar</button>
-                <button class="btn btn-small btn-danger" onclick="deleteIngrediente(${ing.id})">Deletar</button>
-              </td>
-            </tr>
-          `
-            )
-            .join('')}
-        </tbody>
-      </table>
+    <div class="grid grid-2" style="margin-top: 2rem;">
+      <!-- Formulário de cadastro/edição -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title" id="estoque-form-title">Novo item de estoque</h3>
+        </div>
+        <div class="card-content">
+          <form id="estoque-form">
+            <input type="hidden" id="estoque-id" />
+
+            <div class="form-group">
+              <label class="form-label" for="estoque-nome">Nome do produto</label>
+              <input class="form-input" type="text" id="estoque-nome" placeholder="Ex: Arroz, Frango, Brócolis">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="estoque-unidade">Unidade</label>
+              <input class="form-input" type="text" id="estoque-unidade" placeholder="Ex: kg, pacote, litro">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="estoque-quantidade">Quantidade em estoque</label>
+              <input class="form-input" type="number" step="0.01" id="estoque-quantidade" placeholder="Ex: 5">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="estoque-minimo">Quantidade mínima (alerta)</label>
+              <input class="form-input" type="number" step="0.01" id="estoque-minimo" placeholder="Ex: 2">
+              <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">
+                Quando a quantidade ficar abaixo ou igual ao mínimo, o item aparece como <strong>Estoque baixo</strong>.
+              </p>
+            </div>
+
+            <div class="flex gap-2">
+              <button type="submit" class="btn btn-primary btn-block" id="estoque-submit-btn">Salvar</button>
+              <button type="button" class="btn btn-secondary btn-block" onclick="resetEstoqueForm()">Limpar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Tabela de itens de estoque -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Itens em estoque</h3>
+        </div>
+        <div class="card-content">
+          ${
+            app.data.ingredientes.length === 0
+              ? '<p style="color: var(--text-secondary);">Nenhum item cadastrado.</p>'
+              : `
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Unidade</th>
+                      <th>Qtd.</th>
+                      <th>Mínimo</th>
+                      <th>Status</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${
+                      app.data.ingredientes
+                        .map(ing => {
+                          const minimo = ing.quantidadeMinima || 0;
+                          const baixo = ing.quantidade <= minimo && minimo > 0;
+
+                          return `
+                            <tr>
+                              <td>${ing.nome}</td>
+                              <td>${ing.unidade}</td>
+                              <td>${ing.quantidade}</td>
+                              <td>${minimo}</td>
+                              <td>
+                                ${
+                                  baixo
+                                    ? '<span class="badge badge-warning">Estoque baixo</span>'
+                                    : '<span class="badge badge-success">OK</span>'
+                                }
+                              </td>
+                              <td>
+                                <button class="btn btn-small btn-secondary" onclick="editIngrediente(${ing.id})">Editar</button>
+                                <button class="btn btn-small btn-danger" onclick="deleteIngrediente(${ing.id})">Excluir</button>
+                              </td>
+                            </tr>
+                          `;
+                        })
+                        .join('')
+                    }
+                  </tbody>
+                </table>
+              `
+          }
+        </div>
+      </div>
     </div>
   `;
 }
+
+// ===== Funções da página de Estoque =====
+
+function setupEstoquePage() {
+  const form = document.getElementById('estoque-form');
+  if (!form) return;
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const idInput = document.getElementById('estoque-id');
+    const nomeInput = document.getElementById('estoque-nome');
+    const unidadeInput = document.getElementById('estoque-unidade');
+    const qtdInput = document.getElementById('estoque-quantidade');
+    const minimoInput = document.getElementById('estoque-minimo');
+
+    const nome = nomeInput.value.trim();
+    const unidade = unidadeInput.value.trim();
+    const quantidade = parseFloat(qtdInput.value);
+    const minimo = parseFloat(minimoInput.value);
+
+    if (!nome) return alert("Informe o nome.");
+    if (!unidade) return alert("Informe a unidade.");
+    if (isNaN(quantidade)) return alert("Quantidade inválida.");
+    if (isNaN(minimo)) return alert("Quantidade mínima inválida.");
+
+    const idExistente = idInput.value ? Number(idInput.value) : null;
+
+    if (idExistente) {
+      const ing = app.data.ingredientes.find(i => i.id === idExistente);
+      ing.nome = nome;
+      ing.unidade = unidade;
+      ing.quantidade = quantidade;
+      ing.quantidadeMinima = minimo;
+
+    } else {
+      app.data.ingredientes.push({
+        id: Date.now(),
+        nome,
+        unidade,
+        quantidade,
+        quantidadeMinima: minimo,
+        precoUnitario: 0
+      });
+    }
+
+    saveData();
+    renderApp();
+  });
+}
+
+function resetEstoqueForm() {
+  document.getElementById('estoque-id').value = "";
+  document.getElementById('estoque-nome').value = "";
+  document.getElementById('estoque-unidade').value = "";
+  document.getElementById('estoque-quantidade').value = "";
+  document.getElementById('estoque-minimo').value = "";
+
+  document.getElementById('estoque-form-title').textContent = "Novo item de estoque";
+  document.getElementById('estoque-submit-btn').textContent = "Salvar";
+}
+
 
 function renderReceitas() {
   return `
