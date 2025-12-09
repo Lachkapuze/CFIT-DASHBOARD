@@ -80,13 +80,14 @@ function renderApp() {
   
   let html = `
     <div class="sidebar">
-      <div class="logo" style="padding: 0 1.5rem; margin-bottom: 2rem;">
-        <div class="logo-icon">C</div>
-        <div>
-          <div style="font-weight: 700;">CFIT</div>
-          <div style="font-size: 0.75rem; color: var(--text-secondary);">Marmitas</div>
-        </div>
-      </div>
+      <div class="logo" style="padding: 0 1.5rem; margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem;">
+  <img src="logo.png" alt="CFIT Logo" style="width: 40px; height: 40px; object-fit: contain; border-radius: 4px;">
+  <div>
+    <div style="font-weight: 700;">CFIT</div>
+    <div style="font-size: 0.75rem; color: var(--text-secondary);">Marmitas</div>
+  </div>
+</div>
+
       <ul class="nav-menu">
         <li class="nav-item ${app.currentPage === 'dashboard' ? 'active' : ''}" data-page="dashboard">
           <span>📊</span> Dashboard
