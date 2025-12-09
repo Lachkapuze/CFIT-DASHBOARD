@@ -196,6 +196,10 @@ function renderApp() {
   if (app.currentPage === 'pedidos') {
     setupPedidosPage();
   }
+  if (app.currentPage === 'clientes') {
+  setupClientesPage();
+}
+
 
   function setupPedidosPage() {
   const form = document.getElementById('pedido-form');
@@ -560,42 +564,86 @@ function renderKits() {
 
 function renderClientes() {
   return `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-      <h2>Clientes</h2>
-      <button class="btn btn-primary" onclick="addCliente()">+ Novo Cliente</button>
-    </div>
+    <h2>Clientes</h2>
 
-    <div class="card">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Telefone</th>
-            <th>Endereço</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${app.data.clientes
-            .map(
-              (cli) => `
-            <tr>
-              <td>${cli.nome}</td>
-              <td>${cli.telefone}</td>
-              <td>${cli.endereco}</td>
-              <td>
-                <button class="btn btn-small btn-secondary" onclick="editCliente(${cli.id})">Editar</button>
-                <button class="btn btn-small btn-danger" onclick="deleteCliente(${cli.id})">Deletar</button>
-              </td>
-            </tr>
-          `
-            )
-            .join('')}
-        </tbody>
-      </table>
+    <div class="grid grid-2" style="margin-top: 2rem;">
+
+      <!-- FORMULÁRIO DE CLIENTES -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title" id="cliente-form-title">Novo Cliente</h3>
+        </div>
+
+        <div class="card-content">
+          <form id="cliente-form">
+            <input type="hidden" id="cliente-id">
+
+            <div class="form-group">
+              <label class="form-label">Nome Completo</label>
+              <input class="form-input" type="text" id="cliente-nome" placeholder="Ex: João da Silva">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Telefone</label>
+              <input class="form-input" type="text" id="cliente-telefone" placeholder="11999999999">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Endereço</label>
+              <input class="form-input" type="text" id="cliente-endereco" placeholder="Rua, número e bairro">
+            </div>
+
+            <div class="flex gap-2">
+              <button type="submit" class="btn btn-primary btn-block" id="cliente-submit-btn">Salvar</button>
+              <button type="button" class="btn btn-secondary btn-block" onclick="resetClienteForm()">Limpar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- TABELA DE CLIENTES -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Lista de Clientes</h3>
+        </div>
+
+        <div class="card-content">
+          ${
+            app.data.clientes.length === 0
+              ? `<p style="color: var(--text-secondary);">Nenhum cliente cadastrado.</p>`
+              : `
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Telefone</th>
+                      <th>Endereço</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${app.data.clientes.slice().reverse().map(c => `
+                      <tr>
+                        <td>${c.nome}</td>
+                        <td>${c.telefone}</td>
+                        <td>${c.endereco}</td>
+                        <td>
+                          <button class="btn btn-small btn-secondary" onclick="editCliente(${c.id})">Editar</button>
+                          <button class="btn btn-small btn-danger" onclick="deleteCliente(${c.id})">Excluir</button>
+                        </td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              `
+          }
+        </div>
+
+      </div>
     </div>
   `;
 }
+
 
 function renderPedidos() {
   return `
@@ -1055,6 +1103,81 @@ function deletePedido(id) {
   if (!confirm("Excluir pedido?")) return;
 
   app.data.pedidos = app.data.pedidos.filter(p => p.id !== id);
+  saveData();
+  renderApp();
+}
+
+function setupClientesPage() {
+  const form = document.getElementById('cliente-form');
+  if (!form) return;
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const idInput = document.getElementById('cliente-id');
+    const nomeInput = document.getElementById('cliente-nome');
+    const telInput = document.getElementById('cliente-telefone');
+    const endInput = document.getElementById('cliente-endereco');
+
+    const nome = nomeInput.value.trim();
+    const telefone = telInput.value.trim();
+    const endereco = endInput.value.trim();
+
+    if (!nome) return alert("Informe o nome.");
+    if (!telefone) return alert("Informe o telefone.");
+    if (!endereco) return alert("Informe o endereço.");
+
+    const idExistente = idInput.value ? Number(idInput.value) : null;
+
+    if (idExistente) {
+      const cli = app.data.clientes.find(c => c.id === idExistente);
+      cli.nome = nome;
+      cli.telefone = telefone;
+      cli.endereco = endereco;
+
+    } else {
+      app.data.clientes.push({
+        id: Date.now(),
+        nome,
+        telefone,
+        endereco
+      });
+    }
+
+    saveData();
+    renderApp();
+  });
+}
+function resetClienteForm() {
+  document.getElementById('cliente-id').value = "";
+  document.getElementById('cliente-nome').value = "";
+  document.getElementById('cliente-telefone').value = "";
+  document.getElementById('cliente-endereco').value = "";
+
+  document.getElementById('cliente-form-title').textContent = "Novo Cliente";
+  document.getElementById('cliente-submit-btn').textContent = "Salvar";
+}
+
+function editCliente(id) {
+  const cli = app.data.clientes.find(c => c.id === id);
+  if (!cli) return;
+
+  app.currentPage = "clientes";
+  renderApp();
+
+  document.getElementById('cliente-id').value = cli.id;
+  document.getElementById('cliente-nome').value = cli.nome;
+  document.getElementById('cliente-telefone').value = cli.telefone;
+  document.getElementById('cliente-endereco').value = cli.endereco;
+
+  document.getElementById('cliente-form-title').textContent = "Editar Cliente";
+  document.getElementById('cliente-submit-btn').textContent = "Atualizar";
+}
+
+function deleteCliente(id) {
+  if (!confirm("Excluir cliente?")) return;
+
+  app.data.clientes = app.data.clientes.filter(c => c.id !== id);
   saveData();
   renderApp();
 }
