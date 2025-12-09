@@ -187,6 +187,9 @@ function renderApp() {
   if (app.currentPage === 'estoque') {
     setupEstoquePage();
   }
+  if (app.currentPage === 'despesas') {
+  setupDespesasPage();
+}
 }
 
 // ===== Páginas =====
@@ -719,6 +722,134 @@ function renderDespesas() {
     </div>
   `;
 }
+// ===== Funções da página de Despesas =====
+
+function setupDespesasPage() {
+  const form = document.getElementById('despesa-form');
+  if (!form) return;
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const idInput = document.getElementById('despesa-id');
+    const descInput = document.getElementById('despesa-descricao');
+    const valorInput = document.getElementById('despesa-valor');
+    const dataInput = document.getElementById('despesa-data');
+
+    const descricao = (descInput.value || '').trim();
+    const valorRaw = (valorInput.value || '').trim();
+    const dataRaw = (dataInput.value || '').trim();
+
+    if (!descricao) {
+      alert('Informe a descrição da despesa.');
+      return;
+    }
+
+    const valor = parseFloat(valorRaw.replace(',', '.'));
+    if (isNaN(valor) || valor <= 0) {
+      alert('Informe um valor válido.');
+      return;
+    }
+
+    let data;
+    if (dataRaw) {
+      // data do input date (YYYY-MM-DD) -> ISO
+      data = new Date(dataRaw + 'T00:00:00');
+    } else {
+      // Se não informar, usa hoje
+      data = new Date();
+    }
+
+    const idExistente = idInput.value ? Number(idInput.value) : null;
+
+    if (idExistente) {
+      // Edição
+      const desp = app.data.despesas.find(d => d.id === idExistente);
+      if (!desp) {
+        alert('Despesa não encontrada.');
+        return;
+      }
+      desp.descricao = descricao;
+      desp.valor = valor;
+      desp.data = data.toISOString();
+    } else {
+      // Nova
+      const nova = {
+        id: Date.now(),
+        descricao,
+        valor,
+        data: data.toISOString()
+      };
+      app.data.despesas.push(nova);
+    }
+
+    saveData();
+    renderApp();
+  });
+}
+
+function resetDespesaForm() {
+  const idInput = document.getElementById('despesa-id');
+  const descInput = document.getElementById('despesa-descricao');
+  const valorInput = document.getElementById('despesa-valor');
+  const dataInput = document.getElementById('despesa-data');
+  const title = document.getElementById('despesa-form-title');
+  const submitBtn = document.getElementById('despesa-submit-btn');
+
+  if (idInput) idInput.value = '';
+  if (descInput) descInput.value = '';
+  if (valorInput) valorInput.value = '';
+  if (dataInput) dataInput.value = '';
+
+  if (title) title.textContent = 'Nova Despesa';
+  if (submitBtn) submitBtn.textContent = 'Salvar';
+}
+
+function editDespesa(id) {
+  const desp = app.data.despesas.find(d => d.id === id);
+  if (!desp) {
+    alert('Despesa não encontrada.');
+    return;
+  }
+
+  // Garante que estamos na aba Despesas
+  if (app.currentPage !== 'despesas') {
+    app.currentPage = 'despesas';
+    renderApp();
+  }
+
+  const idInput = document.getElementById('despesa-id');
+  const descInput = document.getElementById('despesa-descricao');
+  const valorInput = document.getElementById('despesa-valor');
+  const dataInput = document.getElementById('despesa-data');
+  const title = document.getElementById('despesa-form-title');
+  const submitBtn = document.getElementById('despesa-submit-btn');
+
+  if (idInput) idInput.value = desp.id;
+  if (descInput) descInput.value = desp.descricao;
+  if (valorInput) valorInput.value = desp.valor;
+
+  if (dataInput) {
+    // Converte ISO -> yyyy-mm-dd pro input date
+    const data = new Date(desp.data);
+    const yyyy = data.getFullYear();
+    const mm = String(data.getMonth() + 1).padStart(2, '0');
+    const dd = String(data.getDate()).padStart(2, '0');
+    dataInput.value = `${yyyy}-${mm}-${dd}`;
+  }
+
+  if (title) title.textContent = 'Editar Despesa';
+  if (submitBtn) submitBtn.textContent = 'Atualizar';
+}
+
+function deleteDespesa(id) {
+  if (!confirm('Deseja apagar esta despesa?')) return;
+
+  app.data.despesas = app.data.despesas.filter(d => d.id !== id);
+  saveData();
+  renderApp();
+}
+
 
 
 // ===== Funções de Ação =====
