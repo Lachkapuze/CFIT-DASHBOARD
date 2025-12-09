@@ -1282,21 +1282,7 @@ function editKit(num) {
   alert('Configurar kit ' + num);
 }
 
-function addCliente() {
-  alert('Adicionar novo cliente');
-}
 
-function editCliente(id) {
-  alert('Editar cliente ' + id);
-}
-
-function deleteCliente(id) {
-  if (confirm('Deletar este cliente?')) {
-    app.data.clientes = app.data.clientes.filter((c) => c.id !== id);
-    saveData();
-    renderApp();
-  }
-}
 
 function addPedido() {
   alert('Adicionar novo pedido');
