@@ -703,10 +703,7 @@ function renderPedidos() {
     </div>
   `;
 }
-    </table>
-    </div>
-  `;
-}
+
 
 function renderFinanceiro() {
   const hoje = new Date();
@@ -1182,17 +1179,7 @@ function addPedido() {
   alert('Adicionar novo pedido');
 }
 
-function editPedido(id) {
-  alert('Editar pedido ' + id);
-}
 
-function deletePedido(id) {
-  if (confirm('Deletar este pedido?')) {
-    app.data.pedidos = app.data.pedidos.filter((p) => p.id !== id);
-    saveData();
-    renderApp();
-  }
-}
 
 // ===== Financeiro: ações =====
 function addTransacao() {
