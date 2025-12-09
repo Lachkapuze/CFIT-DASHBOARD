@@ -898,36 +898,6 @@ function calcularFinanceiroFiltrado() {
 }
 
 
-  const dataIni = new Date(ini + 'T00:00:00');
-  const dataFim = new Date(fim + 'T23:59:59');
-
-  // FATURAMENTO (quando pedidos existirão)
-  let faturamento = 0;
-  if (Array.isArray(app.data.pedidos)) {
-    faturamento = app.data.pedidos
-      .filter(p => {
-        const d = new Date(p.data);
-        return d >= dataIni && d <= dataFim;
-      })
-      .reduce((t, p) => t + (p.valor || 0), 0);
-  }
-
-  // DESPESAS
-  let despesas = 0;
-  if (Array.isArray(app.data.despesas)) {
-    despesas = app.data.despesas
-      .filter(d => {
-        const data = new Date(d.data);
-        return data >= dataIni && data <= dataFim;
-      })
-      .reduce((t, d) => t + d.valor, 0);
-  }
-
-  const lucro = faturamento - despesas;
-
-  return { faturamento, despesas, lucro };
-}
-
 
 function renderDespesas() {
   return `
