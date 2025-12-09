@@ -193,6 +193,79 @@ function renderApp() {
   if (app.currentPage === 'financeiro') {
    setupFinanceiroPage();
 }
+  if (app.currentPage === 'pedidos') {
+    setupPedidosPage();
+  }
+
+  function setupPedidosPage() {
+  const form = document.getElementById('pedido-form');
+  if (!form) return;
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const idInput = document.getElementById('pedido-id');
+    const clienteSelect = document.getElementById('pedido-cliente');
+    const valorInput = document.getElementById('pedido-valor');
+    const dataInput = document.getElementById('pedido-data');
+    const statusInput = document.getElementById('pedido-status');
+
+    const clienteId = Number(clienteSelect.value);
+    const cliente = app.data.clientes.find(c => c.id === clienteId);
+
+    if (!cliente) {
+      alert("Selecione um cliente.");
+      return;
+    }
+
+    const valor = parseFloat(valorInput.value);
+    if (isNaN(valor) || valor <= 0) {
+      alert("Informe um valor válido.");
+      return;
+    }
+
+    const data = dataInput.value ? new Date(dataInput.value + "T00:00:00") : new Date();
+    const status = statusInput.value;
+
+    const idExistente = idInput.value.trim() ? Number(idInput.value) : null;
+
+    if (idExistente) {
+      // edição
+      const ped = app.data.pedidos.find(p => p.id === idExistente);
+      ped.clienteId = clienteId;
+      ped.clienteNome = cliente.nome;
+      ped.valor = valor;
+      ped.status = status;
+      ped.data = data.toISOString();
+    } else {
+      // novo
+      app.data.pedidos.push({
+        id: Date.now(),
+        clienteId,
+        clienteNome: cliente.nome,
+        valor,
+        status,
+        data: data.toISOString()
+      });
+    }
+
+    saveData();
+    renderApp();
+  });
+}
+
+function resetPedidoForm() {
+  document.getElementById('pedido-id').value = "";
+  document.getElementById('pedido-cliente').value = "";
+  document.getElementById('pedido-valor').value = "";
+  document.getElementById('pedido-data').value = "";
+  document.getElementById('pedido-status').value = "Recebido";
+
+  document.getElementById('pedido-form-title').textContent = "Novo Pedido";
+  document.getElementById('pedido-submit-btn').textContent = "Salvar";
+}
+
+
 
 }
 
@@ -526,45 +599,111 @@ function renderClientes() {
 
 function renderPedidos() {
   return `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-      <h2>Pedidos</h2>
-      <button class="btn btn-primary" onclick="addPedido()">+ Novo Pedido</button>
-    </div>
+    <h2>Pedidos</h2>
 
-    <div class="card">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Cliente</th>
-            <th>Data</th>
-            <th>Valor</th>
-            <th>Status</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
+    <div class="grid grid-2" style="margin-top: 2rem;">
+
+      <!-- FORMULÁRIO -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title" id="pedido-form-title">Novo Pedido</h3>
+        </div>
+
+        <div class="card-content">
+          <form id="pedido-form">
+            <input type="hidden" id="pedido-id">
+
+            <!-- Cliente -->
+            <div class="form-group">
+              <label class="form-label">Cliente</label>
+              <select class="form-input" id="pedido-cliente">
+                <option value="">Selecione</option>
+                ${app.data.clientes.map(c => `
+                  <option value="${c.id}">${c.nome}</option>
+                `).join('')}
+              </select>
+            </div>
+
+            <!-- Valor -->
+            <div class="form-group">
+              <label class="form-label">Valor do pedido (R$)</label>
+              <input class="form-input" type="number" step="0.01" id="pedido-valor" placeholder="Ex: 39.90">
+            </div>
+
+            <!-- Data -->
+            <div class="form-group">
+              <label class="form-label">Data</label>
+              <input class="form-input" type="date" id="pedido-data">
+            </div>
+
+            <!-- Status -->
+            <div class="form-group">
+              <label class="form-label">Status</label>
+              <select class="form-input" id="pedido-status">
+                <option value="Recebido">Recebido</option>
+                <option value="Preparando">Preparando</option>
+                <option value="Pronto">Pronto</option>
+                <option value="Entregue">Entregue</option>
+                <option value="Cancelado">Cancelado</option>
+              </select>
+            </div>
+
+            <!-- Botões -->
+            <div class="flex gap-2">
+              <button type="submit" class="btn btn-primary btn-block" id="pedido-submit-btn">Salvar</button>
+              <button type="button" class="btn btn-secondary btn-block" onclick="resetPedidoForm()">Limpar</button>
+            </div>
+
+          </form>
+        </div>
+      </div>
+
+      <!-- TABELA -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Lista de Pedidos</h3>
+        </div>
+
+        <div class="card-content">
           ${
             app.data.pedidos.length === 0
-              ? '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">Nenhum pedido registrado</td></tr>'
-              : app.data.pedidos
-                  .map(
-                    (ped) => `
-              <tr>
-                <td>${ped.cliente}</td>
-                <td>${new Date(ped.data).toLocaleDateString('pt-BR')}</td>
-                <td>${formatCurrency(ped.valor)}</td>
-                <td><span class="badge badge-primary">${ped.status}</span></td>
-                <td>
-                  <button class="btn btn-small btn-secondary" onclick="editPedido(${ped.id})">Editar</button>
-                  <button class="btn btn-small btn-danger" onclick="deletePedido(${ped.id})">Deletar</button>
-                </td>
-              </tr>
-            `
-                  )
-                  .join('')
+              ? `<p style="color: var(--text-secondary);">Nenhum pedido cadastrado.</p>`
+              : `
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Cliente</th>
+                      <th>Valor</th>
+                      <th>Status</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${app.data.pedidos.slice().reverse().map(p => `
+                      <tr>
+                        <td>${new Date(p.data).toLocaleDateString('pt-BR')}</td>
+                        <td>${p.clienteNome}</td>
+                        <td>${formatCurrency(p.valor)}</td>
+                        <td><span class="badge badge-primary">${p.status}</span></td>
+                        <td>
+                          <button class="btn btn-small btn-secondary" onclick="editPedido(${p.id})">Editar</button>
+                          <button class="btn btn-small btn-danger" onclick="deletePedido(${p.id})">Excluir</button>
+                        </td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              `
           }
-        </tbody>
-      </table>
+        </div>
+
+      </div>
+
+    </div>
+  `;
+}
+    </table>
     </div>
   `;
 }
@@ -890,6 +1029,37 @@ function setupFinanceiroPage() {
       container.innerHTML = renderFinanceiroResultado();
     }
   });
+}
+
+function editPedido(id) {
+  const ped = app.data.pedidos.find(p => p.id === id);
+  if (!ped) return;
+
+  app.currentPage = "pedidos";
+  renderApp();
+
+  document.getElementById('pedido-id').value = ped.id;
+  document.getElementById('pedido-cliente').value = ped.clienteId;
+  document.getElementById('pedido-valor').value = ped.valor;
+
+  const d = new Date(ped.data);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  document.getElementById('pedido-data').value = `${yyyy}-${mm}-${dd}`;
+
+  document.getElementById('pedido-status').value = ped.status;
+
+  document.getElementById('pedido-form-title').textContent = "Editar Pedido";
+  document.getElementById('pedido-submit-btn').textContent = "Atualizar";
+}
+
+function deletePedido(id) {
+  if (!confirm("Excluir pedido?")) return;
+
+  app.data.pedidos = app.data.pedidos.filter(p => p.id !== id);
+  saveData();
+  renderApp();
 }
 
 
