@@ -112,13 +112,16 @@ function renderApp() {
       </ul>
     </div>
 
-    <div class="main-content">
-      <div class="header">
-        <h1>CFIT - Sistema de Gestão de Marmitas</h1>
-        <div style="text-align: right;">
-          <p style="margin: 0; color: var(--text-secondary);">Bem-vindo!</p>
-        </div>
-      </div>
+    <div class="header">
+  <div style="display: flex; align-items: center; gap: 0.75rem;">
+    <img src="logo.png" alt="CFIT Logo" style="width: 40px; height: 40px; object-fit: contain;">
+    <h1>CFIT - Sistema de Gestão de Marmitas</h1>
+  </div>
+  <div style="text-align: right;">
+    <p style="margin: 0; color: var(--text-secondary);">Bem-vindo!</p>
+  </div>
+</div>
+
 
       <div class="container" style="margin-top: 2rem;">
   `;
