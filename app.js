@@ -676,36 +676,31 @@ function editIngrediente(id) {
     return;
   }
 
-  const nome = prompt('Nome do item de estoque:', ing.nome);
-  if (!nome) return;
-
-  const unidade = prompt('Unidade (ex: kg, pacote, litro):', ing.unidade);
-  if (!unidade) return;
-
-  const qtdRaw = prompt('Quantidade em estoque:', String(ing.quantidade));
-  if (!qtdRaw) return;
-  const quantidade = parseFloat(qtdRaw.replace(',', '.'));
-  if (isNaN(quantidade) || quantidade < 0) {
-    alert('Quantidade inválida.');
-    return;
+  // Garante que estamos na página de estoque
+  if (app.currentPage !== 'estoque') {
+    app.currentPage = 'estoque';
+    renderApp();
   }
 
-  const precoRaw = prompt('Preço unitário:', String(ing.precoUnitario));
-  if (!precoRaw && precoRaw !== '0') return;
-  const precoUnitario = parseFloat(precoRaw.replace(',', '.'));
-  if (isNaN(precoUnitario) || precoUnitario < 0) {
-    alert('Preço inválido.');
-    return;
-  }
+  // Depois do renderApp, os elementos do formulário existem de novo
+  const idInput = document.getElementById('estoque-id');
+  const nomeInput = document.getElementById('estoque-nome');
+  const unidadeInput = document.getElementById('estoque-unidade');
+  const qtdInput = document.getElementById('estoque-quantidade');
+  const minimoInput = document.getElementById('estoque-minimo');
+  const title = document.getElementById('estoque-form-title');
+  const submitBtn = document.getElementById('estoque-submit-btn');
 
-  ing.nome = nome;
-  ing.unidade = unidade;
-  ing.quantidade = quantidade;
-  ing.precoUnitario = precoUnitario;
+  if (idInput) idInput.value = ing.id;
+  if (nomeInput) nomeInput.value = ing.nome;
+  if (unidadeInput) unidadeInput.value = ing.unidade;
+  if (qtdInput) qtdInput.value = ing.quantidade;
+  if (minimoInput) minimoInput.value = ing.quantidadeMinima || 0;
 
-  saveData();
-  renderApp();
+  if (title) title.textContent = 'Editar item de estoque';
+  if (submitBtn) submitBtn.textContent = 'Atualizar';
 }
+
 
 function deleteIngrediente(id) {
   if (confirm('Deletar este item de estoque?')) {
