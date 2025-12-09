@@ -242,7 +242,7 @@ function renderEstoque() {
   return `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
       <h2>Estoque</h2>
-      <button class="btn btn-primary" onclick="addIngrediente()">+ Novo Ingrediente</button>
+      <button class="btn btn-primary" onclick="addIngrediente()">+ Novo Item</button>
     </div>
 
     <div class="card">
