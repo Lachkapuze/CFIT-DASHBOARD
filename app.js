@@ -27,23 +27,28 @@ document.addEventListener('DOMContentLoaded', () => {
 function initializeApp() {
   // Carregar dados do localStorage
   const savedData = localStorage.getItem('cfit-data');
+
   if (savedData) {
-    app.data = JSON.parse(savedData);
+    try {
+      app.data = JSON.parse(savedData);
+    } catch (e) {
+      console.error('Erro ao ler dados salvos, iniciando com dados de exemplo:', e);
+      initializeSampleData();
+    }
+  } else {
+    // Se não tiver nada salvo ainda, cria os dados de exemplo
+    initializeSampleData();
   }
 
-  // Garantir que campo financeiro exista mesmo em dados antigos
+  // Garante que o campo financeiro exista mesmo em dados antigos
   if (!app.data.financeiro) {
     app.data.financeiro = [];
-  }
-
-  // Inicializar dados de exemplo
-  if (app.data.clientes.length === 0) {
-    initializeSampleData();
   }
 
   // Configurar event listeners
   setupEventListeners();
 }
+
 
 function initializeSampleData() {
   // Ingredientes de exemplo
@@ -64,7 +69,7 @@ function initializeSampleData() {
     { id: 1, nome: 'João Silva', telefone: '11999999999', endereco: 'Rua A, 123' },
   ];
 
-  // Financeiro de exemplo (opcional – pode deixar vazio se quiser)
+  // Financeiro começa vazio
   app.data.financeiro = [];
 
   saveData();
@@ -493,16 +498,82 @@ function renderFinanceiro() {
 
 // ===== Funções de Ação =====
 function addIngrediente() {
-  alert('Adicionar novo ingrediente');
+  const nome = prompt('Nome do item de estoque:');
+  if (!nome) return;
+
+  const unidade = prompt('Unidade (ex: kg, pacote, litro):', 'kg');
+  if (!unidade) return;
+
+  const qtdRaw = prompt('Quantidade em estoque:', '1');
+  if (!qtdRaw) return;
+  const quantidade = parseFloat(qtdRaw.replace(',', '.'));
+  if (isNaN(quantidade) || quantidade < 0) {
+    alert('Quantidade inválida.');
+    return;
+  }
+
+  const precoRaw = prompt('Preço unitário (use ponto ou vírgula):', '0');
+  if (!precoRaw && precoRaw !== '0') return;
+  const precoUnitario = parseFloat(precoRaw.replace(',', '.'));
+  if (isNaN(precoUnitario) || precoUnitario < 0) {
+    alert('Preço inválido.');
+    return;
+  }
+
+  const novoItem = {
+    id: Date.now(),
+    nome,
+    unidade,
+    quantidade,
+    precoUnitario
+  };
+
+  app.data.ingredientes.push(novoItem);
+  saveData();
+  renderApp();
 }
 
 function editIngrediente(id) {
-  alert('Editar ingrediente ' + id);
+  const ing = app.data.ingredientes.find(i => i.id === id);
+  if (!ing) {
+    alert('Item não encontrado.');
+    return;
+  }
+
+  const nome = prompt('Nome do item de estoque:', ing.nome);
+  if (!nome) return;
+
+  const unidade = prompt('Unidade (ex: kg, pacote, litro):', ing.unidade);
+  if (!unidade) return;
+
+  const qtdRaw = prompt('Quantidade em estoque:', String(ing.quantidade));
+  if (!qtdRaw) return;
+  const quantidade = parseFloat(qtdRaw.replace(',', '.'));
+  if (isNaN(quantidade) || quantidade < 0) {
+    alert('Quantidade inválida.');
+    return;
+  }
+
+  const precoRaw = prompt('Preço unitário:', String(ing.precoUnitario));
+  if (!precoRaw && precoRaw !== '0') return;
+  const precoUnitario = parseFloat(precoRaw.replace(',', '.'));
+  if (isNaN(precoUnitario) || precoUnitario < 0) {
+    alert('Preço inválido.');
+    return;
+  }
+
+  ing.nome = nome;
+  ing.unidade = unidade;
+  ing.quantidade = quantidade;
+  ing.precoUnitario = precoUnitario;
+
+  saveData();
+  renderApp();
 }
 
 function deleteIngrediente(id) {
-  if (confirm('Deletar este ingrediente?')) {
-    app.data.ingredientes = app.data.ingredientes.filter((i) => i.id !== id);
+  if (confirm('Deletar este item de estoque?')) {
+    app.data.ingredientes = app.data.ingredientes.filter(i => i.id !== id);
     saveData();
     renderApp();
   }
