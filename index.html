@@ -7,6 +7,30 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- LOGIN -->
+<div id="login-screen" style="max-width:360px;margin:40px auto;display:none;">
+  <h2>Entrar</h2>
+  <form id="login-form">
+    <input id="login-email" type="email" placeholder="Email" required style="width:100%;padding:10px;margin:6px 0;">
+    <input id="login-pass" type="password" placeholder="Senha" required style="width:100%;padding:10px;margin:6px 0;">
+    <button type="submit" style="width:100%;padding:10px;margin-top:8px;">Entrar</button>
+    <p id="login-msg" style="color:#d00;margin-top:10px;"></p>
+  </form>
+</div>
+
+<!-- APP -->
+<div id="app-screen" style="display:none;">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <img src="logo.png" style="height:34px;width:auto;" />
+      <strong>CFIT Dashboard</strong>
+    </div>
+    <button id="logout-btn">Sair</button>
+  </div>
+
+  <div id="root"></div>
+</div>
+
     <div id="root"></div>
 
 <!-- Supabase JS (obrigatório) -->
