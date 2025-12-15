@@ -6,6 +6,66 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+const loginScreen = document.getElementById("login-screen");
+const appScreen = document.getElementById("app-screen");
+const loginForm = document.getElementById("login-form");
+const loginMsg = document.getElementById("login-msg");
+const logoutBtn = document.getElementById("logout-btn");
+
+function showLogin() {
+  appScreen.style.display = "none";
+  loginScreen.style.display = "block";
+}
+
+function showApp() {
+  loginScreen.style.display = "none";
+  appScreen.style.display = "block";
+}
+
+async function initAfterLogin() {
+  // aqui você chama suas funções de carregar tudo:
+  if (typeof initAppData === "function") {
+    await initAppData();
+  } else if (typeof loadAllData === "function") {
+    await loadAllData();
+    if (typeof loadDashboard === "function") await loadDashboard();
+  }
+}
+
+async function checkSession() {
+  const { data } = await sb.auth.getSession();
+  if (!data.session) {
+    showLogin();
+    return;
+  }
+  showApp();
+  await initAfterLogin();
+}
+
+loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  loginMsg.textContent = "";
+
+  const email = document.getElementById("login-email").value.trim();
+  const password = document.getElementById("login-pass").value;
+
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) {
+    loginMsg.textContent = "Erro: " + error.message;
+    return;
+  }
+
+  showApp();
+  await initAfterLogin();
+});
+
+logoutBtn.addEventListener("click", async () => {
+  await sb.auth.signOut();
+  showLogin();
+});
+
+// inicia
+document.addEventListener("DOMContentLoaded", checkSession);
 // ===================================
 // CFIT - Sistema de Gestão de Marmitas
 // Lógica Principal da Aplicação
