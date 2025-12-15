@@ -1,41 +1,62 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CFIT - Sistema de Gestão de Marmitas</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CFIT - Sistema de Gestão</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
-   <body>
-
-  <!-- LOGIN -->
-  <div id="login-screen" style="max-width:360px;margin:40px auto;">
-
-    <!-- formulário de login -->
-  </div>
-
-  <!-- APP -->
-  <div id="app-screen" class="app-screen" style="display:none;">
-
-    <header class="topbar">
-      <div class="topbar-left">
-        <img src="logo.png" class="topbar-logo">
-        <strong>CFIT Dashboard</strong>
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen" style="max-width:360px;margin:60px auto;display:none;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+      <img src="logo.png" alt="CFIT" style="width:46px;height:46px;border-radius:8px;object-fit:contain;">
+      <div>
+        <div style="font-weight:800;font-size:18px;">CFIT Dashboard</div>
+        <div style="opacity:.7;font-size:12px;">Acesso restrito</div>
       </div>
-      <button id="logout-btn">Sair</button>
-    </header>
+    </div>
 
-    <!-- 🔴 O ROOT TEM QUE FICAR AQUI DENTRO -->
-    <main id="root" class="app-root"></main>
+    <form id="login-form">
+      <div style="margin-bottom:10px;">
+        <label style="display:block;margin-bottom:6px;">Email</label>
+        <input id="login-email" type="email" required style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;">
+      </div>
 
+      <div style="margin-bottom:10px;">
+        <label style="display:block;margin-bottom:6px;">Senha</label>
+        <input id="login-pass" type="password" required style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;">
+      </div>
+
+      <button type="submit" style="width:100%;padding:10px;border:0;border-radius:8px;cursor:pointer;">
+        Entrar
+      </button>
+
+      <p id="login-msg" style="color:#c00;margin:10px 0 0;"></p>
+    </form>
   </div>
 
-  <!-- Supabase -->
+  <!-- APP SCREEN -->
+  <div id="app-screen" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #eee;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img src="logo.png" alt="CFIT" style="width:28px;height:28px;border-radius:6px;object-fit:contain;">
+        <strong>CFIT</strong>
+      </div>
+      <button id="logout-btn" style="padding:6px 10px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;">
+        Sair
+      </button>
+    </div>
+
+    <!-- APP ROOT -->
+    <div id="root"></div>
+  </div>
+
+  <!-- Supabase (obrigatório) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js"></script>
 
-
+  <!-- Seu app -->
+  <script src="app.js"></script>
 </body>
-
 </html>
