@@ -372,23 +372,18 @@ function calcResumoPeriodo(ini, fim) {
   const despesas = despesasA + despesasB;
   const lucro = faturamento - despesas;
 
- // pedidos do dia (hoje) - compara string YYYY-MM-DD
-function getPedidosHoje() {
-  const hojeISO = todayISO(); // ex: "2025-12-15"
-
-  return (app.data.pedidos || [])
-    .filter((p) => String(p.data || "").slice(0, 10) === hojeISO)
-    .slice(0, 10);
-}
 
 function renderDashboard() {
   const ini = app.filtro.dashboardIni || startOfMonthISO();
   const fim = app.filtro.dashboardFim || todayISO();
   const r = calcResumoPeriodo(ini, fim);
 
-  const pedidosHoje = getPedidosHoje();
+  const hojeISO = todayISO();
+  const pedidosHoje = (app.data.pedidos || [])
+    .filter((p) => String(p.data || "").slice(0, 10) === hojeISO);
 
   return `
+
     <h2>Dashboard</h2>
 
     <div class="card" style="margin-top:1.25rem;">
