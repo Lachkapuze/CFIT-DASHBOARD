@@ -702,11 +702,13 @@ function renderPedidos() {
 
 async function upsertPedido(payload) {
   const dataToSave = {
-    cliente_id: payload.cliente_id,
-    valor: payload.valor,
-    data: payload.data,
-    status: payload.status
-  };
+  cliente_id: payload.cliente_id,
+  valor: payload.valor,
+  valor_total: payload.valor,  // <<< ADICIONA ISSO
+  data: payload.data,
+  status: payload.status
+};
+
 
   if (payload.id) {
     const { error } = await sb
@@ -719,6 +721,7 @@ async function upsertPedido(payload) {
     if (error) throw error;
   }
 }
+
 
 
 async function deletePedidoDB(id) {
