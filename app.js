@@ -170,28 +170,46 @@ sb.auth.onAuthStateChange((_event, session) => {
 // ===============================
 // 6) LOAD (SUPABASE -> app.data)
 // ===============================
+
+// util: ordena por created_at desc (se existir), senão por id (string) desc
+function sortByCreatedAtOrIdDesc(a, b) {
+  const ta = a?.created_at ? Date.parse(a.created_at) : null;
+  const tb = b?.created_at ? Date.parse(b.created_at) : null;
+
+  if (tb !== null && ta !== null) return tb - ta;
+  if (tb !== null) return -1;
+  if (ta !== null) return 1;
+
+  // fallback: UUID/string (ordem estável, não numérica)
+  return String(b?.id || "").localeCompare(String(a?.id || ""));
+}
+
 async function loadClientes() {
   const { data, error } = await sb.from("clientes").select("*");
   if (error) throw error;
-  app.data.clientes = (data || []).sort((a, b) => (b.id || 0) - (a.id || 0));
+
+  // Clientes: melhor ordem é por nome
+  app.data.clientes = (data || []).sort((a, b) =>
+    String(a?.nome || "").localeCompare(String(b?.nome || ""), "pt-BR", { sensitivity: "base" })
+  );
 }
 
 async function loadPedidos() {
   const { data, error } = await sb.from("pedidos").select("*");
   if (error) throw error;
-  app.data.pedidos = (data || []).sort((a, b) => (b.id || 0) - (a.id || 0));
+  app.data.pedidos = (data || []).sort(sortByCreatedAtOrIdDesc);
 }
 
 async function loadDespesas() {
   const { data, error } = await sb.from("despesas").select("*");
   if (error) throw error;
-  app.data.despesas = (data || []).sort((a, b) => (b.id || 0) - (a.id || 0));
+  app.data.despesas = (data || []).sort(sortByCreatedAtOrIdDesc);
 }
 
 async function loadIngredientes() {
   const { data, error } = await sb.from("ingredientes").select("*");
   if (error) throw error;
-  app.data.ingredientes = (data || []).sort((a, b) => (b.id || 0) - (a.id || 0));
+  app.data.ingredientes = (data || []).sort(sortByCreatedAtOrIdDesc);
 }
 
 // opcional: se existir, soma nas despesas do dashboard
@@ -202,7 +220,7 @@ async function loadComprasInsumosIfExists() {
     app.data.compras_insumos = [];
     return;
   }
-  app.data.compras_insumos = (data || []).sort((a, b) => (b.id || 0) - (a.id || 0));
+  app.data.compras_insumos = (data || []).sort(sortByCreatedAtOrIdDesc);
 }
 
 async function loadAllData() {
@@ -214,6 +232,7 @@ async function loadAllData() {
     loadComprasInsumosIfExists(),
   ]);
 }
+
 
 // ===============================
 // 7) INIT AFTER LOGIN
