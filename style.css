@@ -641,3 +641,41 @@ html, body {
   padding: 0; /* importante: não empurra o layout */
 }
 
+/* FORÇA O SITE A OCUPAR A TELA TODA */
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+#app-screen, .app-screen {
+  width: 100vw !important;
+  max-width: none !important;
+}
+
+/* Topbar SEMPRE no topo, largura total da tela */
+.topbar {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100vw !important;
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 10px 14px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+}
+
+/* O app começa abaixo do topo */
+.app-root {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding-top: 56px; /* espaço pro topo */
+}
+
