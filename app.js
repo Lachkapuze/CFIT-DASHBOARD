@@ -701,33 +701,25 @@ function renderPedidos() {
 }
 
 async function upsertPedido(payload) {
-  // payload esperado:
-  // { id?, cliente_id, valor, data, status, forma_pagamento, pago, observacoes }
-
-  let dataToSave = {
+  const dataToSave = {
     cliente_id: payload.cliente_id,
     valor: payload.valor,
     data: payload.data,
-    status: payload.status,
-    forma_pagamento: payload.forma_pagamento,
-    pago: payload.pago,
-    observacoes: payload.observacoes
+    status: payload.status
   };
 
-  let query = sb.from("pedidos");
-
   if (payload.id) {
-    // UPDATE (pedido existente)
-    const { error } = await query
+    const { error } = await sb
+      .from("pedidos")
       .update(dataToSave)
       .eq("id", String(payload.id));
     if (error) throw error;
   } else {
-    // INSERT (novo pedido) — NÃO envia id
-    const { error } = await query.insert([dataToSave]);
+    const { error } = await sb.from("pedidos").insert([dataToSave]);
     if (error) throw error;
   }
 }
+
 
 async function deletePedidoDB(id) {
   const idStr = String(id || "").trim();
@@ -1010,45 +1002,34 @@ if (cliReset) cliReset.addEventListener("click", () => resetClienteForm());
 
   // PEDIDOS
   const pedForm = document.getElementById("ped-form");
-  if (pedForm) {
-    pedForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
+if (pedForm) {
+  pedForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-      const id = Number(document.getElementById("ped-id")?.value || 0) || null;
-      const cliente_id = document.getElementById("ped-cliente")?.value?.trim() || "";
-      const valor = Number(document.getElementById("ped-valor")?.value || 0);
-      const dataInput = document.getElementById("ped-data")?.value;
-      const status = document.getElementById("ped-status")?.value;
+    const id = document.getElementById("ped-id")?.value?.trim() || null;
+    const cliente_id = document.getElementById("ped-cliente")?.value?.trim() || "";
+    const valor = Number(document.getElementById("ped-valor")?.value || 0);
+    const data = document.getElementById("ped-data")?.value || todayISO();
+    const status = document.getElementById("ped-status")?.value || "Recebido";
 
-      if (!cliente_id) return alert("Selecione um cliente.");
-      if (!valor || valor <= 0) return alert("Informe um valor válido.");
+    if (!cliente_id) return alert("Selecione um cliente.");
+    if (!valor || valor <= 0) return alert("Informe um valor válido.");
 
-      const cli = app.data.clientes.find((c) => Number(c.id) === Number(clienteId));
-      if (!cli) return alert("Cliente inválido.");
+    try {
+      await upsertPedido({ id, cliente_id, valor, data, status });
+      await loadPedidos();
+      resetPedidoForm();
+      renderApp();
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao salvar pedido: " + (err?.message || err));
+    }
+  });
+}
 
-      const dataISO = new Date((dataInput || todayISO()) + "T12:00:00").toISOString();
+const pedReset = document.getElementById("ped-reset");
+if (pedReset) pedReset.addEventListener("click", () => resetPedidoForm());
 
-      try {
-        await upsertPedido({
-          id,
-          cliente_id: clienteId,
-          cliente_nome: cli.nome,
-          valor,
-          status,
-          data: dataISO,
-        });
-        await loadPedidos();
-        resetPedidoForm();
-        renderApp();
-      } catch (err) {
-        console.error(err);
-        alert("Erro ao salvar pedido: " + (err?.message || err));
-      }
-    });
-  }
-
-  const pedReset = document.getElementById("ped-reset");
-  if (pedReset) pedReset.addEventListener("click", () => resetPedidoForm());
 
   // DESPESAS
   const despForm = document.getElementById("desp-form");
@@ -1225,6 +1206,7 @@ function fillPedidoForm(id) {
   document.getElementById("ped-title").textContent = "Editar Pedido";
   document.getElementById("ped-submit").textContent = "Atualizar";
 }
+
 
 function resetDespesaForm() {
   const id = document.getElementById("desp-id");
