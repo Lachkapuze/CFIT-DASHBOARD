@@ -23,14 +23,25 @@ function showApp() {
 }
 
 async function initAfterLogin() {
-  // aqui você chama suas funções de carregar tudo:
-  if (typeof initAppData === "function") {
-    await initAppData();
-  } else if (typeof loadAllData === "function") {
-    await loadAllData();
+  // Sempre que logar (ou voltar por sessão), força carregar dados do Supabase
+  try {
+    if (typeof loadIngredientes === "function") await loadIngredientes();
+    if (typeof loadCompras === "function") await loadCompras();
+    if (typeof loadClientes === "function") await loadClientes();
+    if (typeof loadKits === "function") await loadKits();
+    if (typeof loadPedidos === "function") await loadPedidos();
+
+    // dropdowns (se existirem)
+    if (typeof loadClientesDropdown === "function") await loadClientesDropdown();
+    if (typeof loadKitsDropdown === "function") await loadKitsDropdown();
+
+    // dashboard (se existir)
     if (typeof loadDashboard === "function") await loadDashboard();
+  } catch (e) {
+    console.error("Erro ao carregar dados pós-login:", e);
   }
 }
+
 
 async function checkSession() {
   const { data } = await sb.auth.getSession();
@@ -93,11 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initializeApp() {
-  const savedData = localStorage.getItem('cfit-data');
-
-  if (savedData) {
-    try {
-      app.data = JSON.parse(savedData);
+  
     } catch (e) {
       console.error('Erro ao ler dados salvos, iniciando com dados de exemplo:', e);
       initializeSampleData();
