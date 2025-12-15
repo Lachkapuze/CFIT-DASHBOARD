@@ -7,38 +7,33 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- LOGIN -->
-<div id="login-screen" style="max-width:360px;margin:40px auto;display:none;">
-  <h2>Entrar</h2>
-  <form id="login-form">
-    <input id="login-email" type="email" placeholder="Email" required style="width:100%;padding:10px;margin:6px 0;">
-    <input id="login-pass" type="password" placeholder="Senha" required style="width:100%;padding:10px;margin:6px 0;">
-    <button type="submit" style="width:100%;padding:10px;margin-top:8px;">Entrar</button>
-    <p id="login-msg" style="color:#d00;margin-top:10px;"></p>
-  </form>
-</div>
+   <body>
 
-<!-- APP -->
-<div id="app-screen" class="app-screen" style="display:none;">
-  <header class="topbar">
-    <div class="topbar-left">
-      <img src="logo.png" class="topbar-logo" />
-      <strong>CFIT Dashboard</strong>
-    </div>
-    <button id="logout-btn" class="topbar-logout">Sair</button>
-  </header>
+  <!-- LOGIN -->
+  <div id="login-screen" style="max-width:360px;margin:40px auto;display:none;">
+    <!-- formulário de login -->
+  </div>
 
-  <main id="root" class="app-root"></main>
-</div>
+  <!-- APP -->
+  <div id="app-screen" class="app-screen" style="display:none;">
 
+    <header class="topbar">
+      <div class="topbar-left">
+        <img src="logo.png" class="topbar-logo">
+        <strong>CFIT Dashboard</strong>
+      </div>
+      <button id="logout-btn">Sair</button>
+    </header>
 
-    <div id="root"></div>
+    <!-- 🔴 O ROOT TEM QUE FICAR AQUI DENTRO -->
+    <main id="root" class="app-root"></main>
 
-<!-- Supabase JS (obrigatório) -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </div>
 
-<!-- Seu app -->
-<script src="app.js"></script>
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
 
 </body>
+
 </html>
