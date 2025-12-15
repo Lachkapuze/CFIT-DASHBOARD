@@ -561,17 +561,38 @@ function renderClientes() {
 }
 
 async function upsertCliente(payload) {
-  // payload: {id?, nome, telefone, endereco}
-  if (!payload.id) payload.id = Date.now();
+  // payload: { id?, nome, telefone, endereco }
 
-  const { error } = await sb.from("clientes").upsert(payload, { onConflict: "id" });
-  if (error) throw error;
+  // REGRA:
+  // - Novo cliente: NÃO envia id (Supabase gera UUID)
+  // - Cliente existente: usa id UUID já vindo do banco
+
+  let dataToSave = {
+    nome: payload.nome,
+    telefone: payload.telefone,
+    endereco: payload.endereco,
+  };
+
+  let query = sb.from("clientes");
+
+  if (payload.id) {
+    // UPDATE
+    const { error } = await query
+      .update(dataToSave)
+      .eq("id", payload.id);
+    if (error) throw error;
+  } else {
+    // INSERT
+    const { error } = await query.insert([dataToSave]);
+    if (error) throw error;
+  }
 }
 
 async function deleteClienteDB(id) {
-  const { error } = await sb.from("clientes").delete().eq("id", id);
+  const { error } = await sb.from("clientes").delete().eq("id", String(id));
   if (error) throw error;
 }
+
 
 // ===============================
 // 12) PEDIDOS (CRUD)
@@ -680,18 +701,44 @@ function renderPedidos() {
 }
 
 async function upsertPedido(payload) {
-  if (!payload.id) payload.id = Date.now();
-  const { error } = await sb.from("pedidos").upsert(payload, { onConflict: "id" });
-  if (error) throw error;
+  // payload esperado:
+  // { id?, cliente_id, valor, data, status, forma_pagamento, pago, observacoes }
+
+  let dataToSave = {
+    cliente_id: payload.cliente_id,
+    valor: payload.valor,
+    data: payload.data,
+    status: payload.status,
+    forma_pagamento: payload.forma_pagamento,
+    pago: payload.pago,
+    observacoes: payload.observacoes
+  };
+
+  let query = sb.from("pedidos");
+
+  if (payload.id) {
+    // UPDATE (pedido existente)
+    const { error } = await query
+      .update(dataToSave)
+      .eq("id", String(payload.id));
+    if (error) throw error;
+  } else {
+    // INSERT (novo pedido) — NÃO envia id
+    const { error } = await query.insert([dataToSave]);
+    if (error) throw error;
+  }
 }
 
 async function deletePedidoDB(id) {
   const idStr = String(id || "").trim();
-  if (!idStr || idStr === "NaN") throw new Error("ID inválido para excluir pedido.");
+  if (!idStr || idStr === "NaN") {
+    throw new Error("ID inválido para excluir pedido.");
+  }
 
   const { error } = await sb.from("pedidos").delete().eq("id", idStr);
   if (error) throw error;
 }
+
 
 
 // ===============================
@@ -886,15 +933,35 @@ function renderEstoque() {
 }
 
 async function upsertIngrediente(payload) {
-  if (!payload.id) payload.id = Date.now();
-  const { error } = await sb.from("ingredientes").upsert(payload, { onConflict: "id" });
-  if (error) throw error;
+  // payload: { id?, nome, unidade, custo, estoque_minimo }
+
+  let dataToSave = {
+    nome: payload.nome,
+    unidade: payload.unidade,
+    custo: payload.custo,
+    estoque_minimo: payload.estoque_minimo
+  };
+
+  let query = sb.from("ingredientes");
+
+  if (payload.id) {
+    // UPDATE
+    const { error } = await query
+      .update(dataToSave)
+      .eq("id", payload.id);
+    if (error) throw error;
+  } else {
+    // INSERT
+    const { error } = await query.insert([dataToSave]);
+    if (error) throw error;
+  }
 }
 
 async function deleteIngredienteDB(id) {
-  const { error } = await sb.from("ingredientes").delete().eq("id", id);
+  const { error } = await sb.from("ingredientes").delete().eq("id", String(id));
   if (error) throw error;
 }
+
 
 // ===============================
 // 15) EVENTS POR PÁGINA
@@ -915,34 +982,34 @@ function bindPageEvents() {
 
   // CLIENTES
   const cliForm = document.getElementById("cli-form");
-  if (cliForm) {
-    cliForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
+if (cliForm) {
+  cliForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-      const id = Number(document.getElementById("cli-id")?.value || 0) || null;
-      const nome = document.getElementById("cli-nome")?.value?.trim();
-      const telefone = document.getElementById("cli-tel")?.value?.trim();
-      const endereco = document.getElementById("cli-end")?.value?.trim();
+    const id = document.getElementById("cli-id")?.value?.trim() || null;
+    const nome = document.getElementById("cli-nome")?.value?.trim();
+    const telefone = document.getElementById("cli-tel")?.value?.trim();
+    const endereco = document.getElementById("cli-end")?.value?.trim();
 
-      if (!nome) return alert("Informe o nome.");
-      if (!telefone) return alert("Informe o telefone.");
-      if (!endereco) return alert("Informe o endereço.");
+    if (!nome) return alert("Informe o nome.");
+    if (!telefone) return alert("Informe o telefone.");
+    if (!endereco) return alert("Informe o endereço.");
 
-      try {
-        await upsertCliente({ id, nome, telefone, endereco });
-        await loadClientes();
-        // pedidos usam cliente_nome -> se editar nome, não quebra mas mantém histórico dos pedidos
-        resetClienteForm();
-        renderApp();
-      } catch (err) {
-        console.error(err);
-        alert("Erro ao salvar cliente: " + (err?.message || err));
-      }
-    });
-  }
+    try {
+      await upsertCliente({ id, nome, telefone, endereco });
+      await loadClientes();
+      // pedidos usam cliente_nome -> histórico preservado
+      resetClienteForm();
+      renderApp();
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao salvar cliente: " + (err?.message || err));
+    }
+  });
+}
 
-  const cliReset = document.getElementById("cli-reset");
-  if (cliReset) cliReset.addEventListener("click", () => resetClienteForm());
+const cliReset = document.getElementById("cli-reset");
+if (cliReset) cliReset.addEventListener("click", () => resetClienteForm());
 
   // PEDIDOS
   const pedForm = document.getElementById("ped-form");
@@ -1120,7 +1187,7 @@ function resetClienteForm() {
 }
 
 function fillClienteForm(id) {
-  const c = app.data.clientes.find((x) => Number(x.id) === Number(id));
+  const c = app.data.clientes.find((x) => String(x.id) === String(id));
   if (!c) return;
 
   document.getElementById("cli-id").value = c.id;
@@ -1150,7 +1217,7 @@ function resetPedidoForm() {
 }
 
 function fillPedidoForm(id) {
-  const p = app.data.pedidos.find((x) => Number(x.id) === Number(id));
+  const p = app.data.pedidos.find((x) => String(x.id) === String(id));
   if (!p) return;
 
   document.getElementById("ped-id").value = p.id;
@@ -1179,7 +1246,7 @@ function resetDespesaForm() {
 }
 
 function fillDespesaForm(id) {
-  const d = app.data.despesas.find((x) => Number(x.id) === Number(id));
+  const d = app.data.despesas.find((x) => String(x.id) === String(id));
   if (!d) return;
 
   document.getElementById("desp-id").value = d.id;
@@ -1209,7 +1276,7 @@ function resetEstoqueForm() {
 }
 
 function fillEstoqueForm(id) {
-  const i = app.data.ingredientes.find((x) => Number(x.id) === Number(id));
+  const i = app.data.ingredientes.find((x) => String(x.id) === String(id));
   if (!i) return;
 
   document.getElementById("est-id").value = i.id;
@@ -1225,3 +1292,4 @@ function fillEstoqueForm(id) {
 // 17) START
 // ===============================
 document.addEventListener("DOMContentLoaded", checkSession);
+
