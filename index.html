@@ -19,17 +19,18 @@
 </div>
 
 <!-- APP -->
-<div id="app-screen" style="display:none;">
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;">
-    <div style="display:flex;align-items:center;gap:8px;">
-      <img src="logo.png" style="height:34px;width:auto;" />
+<div id="app-screen" class="app-screen" style="display:none;">
+  <header class="topbar">
+    <div class="topbar-left">
+      <img src="logo.png" class="topbar-logo" />
       <strong>CFIT Dashboard</strong>
     </div>
-    <button id="logout-btn">Sair</button>
-  </div>
+    <button id="logout-btn" class="topbar-logout">Sair</button>
+  </header>
 
-  <div id="root"></div>
+  <main id="root" class="app-root"></main>
 </div>
+
 
     <div id="root"></div>
 
