@@ -667,9 +667,13 @@ async function upsertPedido(payload) {
 }
 
 async function deletePedidoDB(id) {
-  const { error } = await sb.from('pedidos').delete().eq('id', String(id))
+  const idStr = String(id || "").trim();
+  if (!idStr || idStr === "NaN") throw new Error("ID inválido para excluir pedido.");
+
+  const { error } = await sb.from("pedidos").delete().eq("id", idStr);
   if (error) throw error;
 }
+
 
 // ===============================
 // 13) DESPESAS (CRUD)
@@ -1025,10 +1029,13 @@ function bindPageEvents() {
   if (estReset) estReset.addEventListener("click", () => resetEstoqueForm());
 
   // AÇÕES NAS TABELAS (delegação)
-  root.querySelectorAll("button[data-act]").forEach((btn) => {
+   root.querySelectorAll("button[data-act]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const act = btn.dataset.act;
-      const id = Number(btn.dataset.id);
+
+      // ✅ NÃO converte tudo para Number (UUID vira NaN)
+      const rawId = (btn.dataset.id ?? "").trim();
+      const id = rawId && /^\d+$/.test(rawId) ? Number(rawId) : rawId;
 
       try {
         if (act === "cli-edit") return fillClienteForm(id);
