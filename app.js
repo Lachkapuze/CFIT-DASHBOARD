@@ -5,6 +5,31 @@ const SUPABASE_URL = "https://dsfovsdcatskyfgdhblc.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzZm92c2RjYXRza3lmZ2RoYmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxOTU4MzUsImV4cCI6MjA4MDc3MTgzNX0.hmZXAOGZ1Gm9SQqjlKClaLmdsP2udDFgQN25S58qiWw";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+async function loadClientes() {
+  const { data, error } = await sb.from("clientes").select("*").order("id", { ascending: true });
+  if (error) throw error;
+  app.data.clientes = data || [];
+}
+
+async function upsertCliente({ id, nome, telefone, endereco }) {
+  if (id) {
+    const { error } = await sb.from("clientes")
+      .update({ nome, telefone, endereco })
+      .eq("id", id);
+    if (error) throw error;
+  } else {
+    const { error } = await sb.from("clientes")
+      .insert([{ nome, telefone, endereco }]);
+    if (error) throw error;
+  }
+  await loadClientes();
+}
+
+async function deleteClienteDB(id) {
+  const { error } = await sb.from("clientes").delete().eq("id", id);
+  if (error) throw error;
+  await loadClientes();
+}
 
 const loginScreen = document.getElementById("login-screen");
 const appScreen = document.getElementById("app-screen");
@@ -23,22 +48,22 @@ function showApp() {
 }
 
 async function initAfterLogin() {
-  // Sempre que logar (ou voltar por sessão), força carregar dados do Supabase
   try {
-    if (typeof loadIngredientes === "function") await loadIngredientes();
-    if (typeof loadCompras === "function") await loadCompras();
-    if (typeof loadClientes === "function") await loadClientes();
-    if (typeof loadKits === "function") await loadKits();
-    if (typeof loadPedidos === "function") await loadPedidos();
+    // carrega do Supabase (se existir)
+    if (window.loadIngredientes) await loadIngredientes();
+    if (window.loadCompras) await loadCompras();
+    if (window.loadClientes) await loadClientes();
+    if (window.loadKits) await loadKits();
+    if (window.loadPedidos) await loadPedidos();
+    if (window.loadDespesas) await loadDespesas();
 
-    // dropdowns (se existirem)
-    if (typeof loadClientesDropdown === "function") await loadClientesDropdown();
-    if (typeof loadKitsDropdown === "function") await loadKitsDropdown();
+    // renderiza depois de carregar
+    if (window.renderApp) renderApp();
 
-    // dashboard (se existir)
-    if (typeof loadDashboard === "function") await loadDashboard();
+    // atualiza dashboard se tiver função separada
+    if (window.loadDashboard) await loadDashboard();
   } catch (e) {
-    console.error("Erro ao carregar dados pós-login:", e);
+    console.error("Erro pós-login:", e);
   }
 }
 
@@ -98,20 +123,7 @@ const app = {
 };
 
 // ===== Inicialização =====
-document.addEventListener('DOMContentLoaded', () => {
-  initializeApp();
-  renderApp();
-});
 
-function initializeApp() {
-  
-    } catch (e) {
-      console.error('Erro ao ler dados salvos, iniciando com dados de exemplo:', e);
-      initializeSampleData();
-    }
-  } else {
-    initializeSampleData();
-  }
 
   // Garante campos novos em dados antigos
   if (!app.data.financeiro) app.data.financeiro = [];
@@ -1255,16 +1267,24 @@ function setupClientesPage() {
       cli.endereco = endereco;
 
     } else {
-      app.data.clientes.push({
-        id: Date.now(),
-        nome,
-        telefone,
-        endereco
-      });
-    }
+      await sb.from('clientes').insert({
+  nome,
+  telefone,
+  endereco
+});
+await loadClientes();
+renderApp();
+await sb.from('clientes')
+  .update({ nome, telefone, endereco })
+  .eq('id', idExistente);
+await loadClientes();
+renderApp();
+await sb.from('clientes')
+  .delete()
+  .eq('id', id);
+await loadClientes();
+renderApp();
 
-    saveData();
-    renderApp();
   });
 }
 function resetClienteForm() {
@@ -1461,8 +1481,9 @@ function deleteTransacao(id) {
 
 // ===== Utilitários =====
 function saveData() {
-  localStorage.setItem('cfit-data', JSON.stringify(app.data));
+  // DESATIVADO: dados agora vivem no Supabase
 }
+
 
 function formatCurrency(value) {
   return new Intl.NumberFormat('pt-BR', {
