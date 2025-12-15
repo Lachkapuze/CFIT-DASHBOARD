@@ -1013,7 +1013,16 @@ if (pedForm) {
     const cliente_id = document.getElementById("ped-cliente")?.value?.trim() || "";
     const valor = Number(document.getElementById("ped-valor")?.value || 0);
     const data = document.getElementById("ped-data")?.value || todayISO();
-    const status = document.getElementById("ped-status")?.value || "Recebido";
+    const statusUI = document.getElementById("ped-status")?.value || "Recebido";
+
+const status = {
+  "Recebido": "recebido",
+  "Preparando": "preparando",
+  "Pronto": "pronto",
+  "Entregue": "entregue",
+  "Cancelado": "cancelado"
+}[statusUI] || "recebido";
+
 
     if (!cliente_id) return alert("Selecione um cliente.");
     if (!valor || valor <= 0) return alert("Informe um valor válido.");
