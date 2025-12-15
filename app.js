@@ -1,3 +1,11 @@
+// ===============================
+// SUPABASE CONFIG
+// ===============================
+const SUPABASE_URL = "https://dsfovsdcatskyfgdhblc.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzZm92c2RjYXRza3lmZ2RoYmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxOTU4MzUsImV4cCI6MjA4MDc3MTgzNX0.hmZXAOGZ1Gm9SQqjlKClaLmdsP2udDFgQN25S58qiWw";
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 // ===================================
 // CFIT - Sistema de Gestão de Marmitas
 // Lógica Principal da Aplicação
