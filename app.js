@@ -933,26 +933,23 @@ function renderEstoque() {
 }
 
 async function upsertIngrediente(payload) {
-  // payload: { id?, nome, unidade, custo, estoque_minimo }
+  // payload: { id?, nome, unidade, quantidade, quantidade_minima }
 
-  let dataToSave = {
+  const dataToSave = {
     nome: payload.nome,
     unidade: payload.unidade,
-    custo: payload.custo,
-    estoque_minimo: payload.estoque_minimo
+    quantidade: Number(payload.quantidade ?? 0),
+    quantidade_minima: Number(payload.quantidade_minima ?? 0),
   };
 
-  let query = sb.from("ingredientes");
-
   if (payload.id) {
-    // UPDATE
-    const { error } = await query
+    const { error } = await sb
+      .from("ingredientes")
       .update(dataToSave)
-      .eq("id", payload.id);
+      .eq("id", String(payload.id));
     if (error) throw error;
   } else {
-    // INSERT
-    const { error } = await query.insert([dataToSave]);
+    const { error } = await sb.from("ingredientes").insert([dataToSave]);
     if (error) throw error;
   }
 }
@@ -1018,12 +1015,12 @@ if (cliReset) cliReset.addEventListener("click", () => resetClienteForm());
       e.preventDefault();
 
       const id = Number(document.getElementById("ped-id")?.value || 0) || null;
-      const clienteId = Number(document.getElementById("ped-cliente")?.value || 0);
+      const cliente_id = document.getElementById("ped-cliente")?.value?.trim() || "";
       const valor = Number(document.getElementById("ped-valor")?.value || 0);
       const dataInput = document.getElementById("ped-data")?.value;
       const status = document.getElementById("ped-status")?.value;
 
-      if (!clienteId) return alert("Selecione um cliente.");
+      if (!cliente_id) return alert("Selecione um cliente.");
       if (!valor || valor <= 0) return alert("Informe um valor válido.");
 
       const cli = app.data.clientes.find((c) => Number(c.id) === Number(clienteId));
