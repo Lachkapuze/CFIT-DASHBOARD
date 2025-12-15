@@ -372,21 +372,15 @@ function calcResumoPeriodo(ini, fim) {
   const despesas = despesasA + despesasB;
   const lucro = faturamento - despesas;
 
-  // pedidos do dia (hoje)
-  const hoje = new Date();
-  const pedidosHoje = (app.data.pedidos || [])
-    .filter((p) => {
-      const d = new Date(p.data);
-      return (
-        d.getFullYear() === hoje.getFullYear() &&
-        d.getMonth() === hoje.getMonth() &&
-        d.getDate() === hoje.getDate()
-      );
-    })
-    .slice(0, 10);
+ // pedidos do dia (hoje) - compara string YYYY-MM-DD
+const hojeISO = todayISO(); // ex: "2025-12-15"
 
-  return { faturamento, despesas, lucro, pedidosHoje };
-}
+const pedidosHoje = (app.data.pedidos || [])
+  .filter((p) => String(p.data || "").slice(0, 10) === hojeISO)
+  .slice(0, 10);
+
+return { faturamento, despesas, lucro, pedidosHoje };
+
 
 function renderDashboard() {
   const ini = app.filtro.dashboardIni || startOfMonthISO();
@@ -428,7 +422,7 @@ function renderDashboard() {
         <div class="stat-label">Despesas</div>
         <div class="stat-value">${formatCurrency(r.despesas)}</div>
         <div style="opacity:.65;font-size:12px;margin-top:6px;">
-          (inclui compras_insumos se existir)
+          
         </div>
       </div>
       <div class="stat-card stat-lucro">
@@ -441,25 +435,33 @@ function renderDashboard() {
       <div class="card">
         <div class="card-header">
           <h3 class="card-title">Pedidos do dia</h3>
+<div class="card-content">
+  ${
+    pedidosHoje.length
+      ? `
+        <div style="font-weight:600; margin-bottom:.5rem;">
+          ${pedidosHoje.length} pedido(s) hoje
         </div>
-        <div class="card-content">
-          ${
-            r.pedidosHoje.length
-              ? r.pedidosHoje
-                  .map(
-                    (p) => `
-                      <div style="display:flex;justify-content:space-between;margin:6px 0;">
-                        <div>${escapeHtml(p.cliente_nome || p.clienteNome || "Cliente")}</div>
-                        <div>${formatCurrency(p.valor)} <span style="opacity:.7">(${escapeHtml(
-                          p.status
-                        )})</span></div>
-                      </div>
-                    `
-                  )
-                  .join("")
-              : `<div style="opacity:.7;">Nenhum pedido hoje.</div>`
-          }
-        </div>
+        <ul style="margin:0; padding-left:1rem;">
+          ${pedidosHoje
+            .map(
+              (p) => `
+                <li>
+                  ${escapeHtml(
+                    app.data.clientes.find(c => c.id === p.cliente_id)?.nome || ""
+                  )}
+                  — ${formatCurrency(p.valor_total ?? p.valor ?? 0)}
+                  — ${escapeHtml(p.status || "")}
+                </li>
+              `
+            )
+            .join("")}
+        </ul>
+      `
+      : `<div style="opacity:.7;">Nenhum pedido hoje.</div>`
+  }
+</div>
+
       </div>
 
       <div class="card">
