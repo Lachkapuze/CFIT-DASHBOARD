@@ -667,7 +667,7 @@ async function upsertPedido(payload) {
 }
 
 async function deletePedidoDB(id) {
-  const { error } = await sb.from("pedidos").delete().eq("id", id);
+  const { error } = await sb.from('pedidos').delete().eq('id', String(id))
   if (error) throw error;
 }
 
