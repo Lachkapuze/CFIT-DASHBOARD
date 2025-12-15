@@ -1076,33 +1076,35 @@ if (pedReset) pedReset.addEventListener("click", () => resetPedidoForm());
 
   // ESTOQUE
   const estForm = document.getElementById("est-form");
-  if (estForm) {
-    estForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
+if (estForm) {
+  estForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-      const id = Number(document.getElementById("est-id")?.value || 0) || null;
-      const nome = document.getElementById("est-nome")?.value?.trim();
-      const unidade = document.getElementById("est-uni")?.value?.trim();
-      const quantidade = Number(document.getElementById("est-qtd")?.value || 0);
-      const quantidade_minima = Number(document.getElementById("est-min")?.value || 0);
+    const id = document.getElementById("est-id")?.value?.trim() || null;
+    const nome = document.getElementById("est-nome")?.value?.trim();
+    const unidade = document.getElementById("est-uni")?.value?.trim();
 
-      if (!nome) return alert("Informe o nome.");
-      if (!unidade) return alert("Informe a unidade.");
+    const quantidade = Number(document.getElementById("est-qtd")?.value || 0);
+    const quantidade_minima = Number(document.getElementById("est-min")?.value || 0);
 
-      try {
-        await upsertIngrediente({ id, nome, unidade, quantidade, quantidade_minima });
-        await loadIngredientes();
-        resetEstoqueForm();
-        renderApp();
-      } catch (err) {
-        console.error(err);
-        alert("Erro ao salvar estoque: " + (err?.message || err));
-      }
-    });
-  }
+    if (!nome) return alert("Informe o nome.");
+    if (!unidade) return alert("Informe a unidade.");
 
-  const estReset = document.getElementById("est-reset");
-  if (estReset) estReset.addEventListener("click", () => resetEstoqueForm());
+    try {
+      await upsertIngrediente({ id, nome, unidade, quantidade, quantidade_minima });
+      await loadIngredientes();
+      resetEstoqueForm();
+      renderApp();
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao salvar estoque: " + (err?.message || err));
+    }
+  });
+}
+
+const estReset = document.getElementById("est-reset");
+if (estReset) estReset.addEventListener("click", () => resetEstoqueForm());
+
 
   // AÇÕES NAS TABELAS (delegação)
    root.querySelectorAll("button[data-act]").forEach((btn) => {
@@ -1266,18 +1268,20 @@ function resetEstoqueForm() {
   if (submit) submit.textContent = "Salvar";
 }
 
-function fillEstoqueForm(id) {
+ function fillEstoqueForm(id) {
   const i = app.data.ingredientes.find((x) => String(x.id) === String(id));
   if (!i) return;
 
-  document.getElementById("est-id").value = i.id;
+  document.getElementById("est-id").value = i.id; // <<< ESSENCIAL
   document.getElementById("est-nome").value = i.nome || "";
   document.getElementById("est-uni").value = i.unidade || "";
   document.getElementById("est-qtd").value = i.quantidade ?? 0;
   document.getElementById("est-min").value = i.quantidade_minima ?? 0;
+
   document.getElementById("est-title").textContent = "Editar Item";
   document.getElementById("est-submit").textContent = "Atualizar";
 }
+
 
 // ===============================
 // 17) START
