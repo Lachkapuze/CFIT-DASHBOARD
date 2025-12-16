@@ -1063,8 +1063,8 @@ async function deleteCardapioItemDB(id) {
 async function upsertPedido(payload) {
   const dataToSave = {
     cliente_id: payload.cliente_id,
-    valor: payload.valor,
-    valor_total: payload.valor, // mantém (se você usa no dashboard)
+    valor: Number(payload.valor || 0),
+    valor_total: Number(payload.valor_total ?? payload.valor ?? 0),
     data: payload.data,
     status: payload.status,
 
@@ -1072,21 +1072,6 @@ async function upsertPedido(payload) {
     cardapio_id: payload.cardapio_id || null,
     observacoes: payload.observacoes || null,
   };
-
-  if (payload.id) {
-    const { error } = await sb
-      .from("pedidos")
-      .update(dataToSave)
-      .eq("id", String(payload.id));
-    if (error) throw error;
-  } else {
-    const { error } = await sb.from("pedidos").insert([dataToSave]);
-    if (error) throw error;
-  }
-}
-
-
-
 
   if (payload.id) {
     const { error } = await sb
