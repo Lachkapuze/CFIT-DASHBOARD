@@ -84,19 +84,19 @@ function formatCurrency(value) {
 function toISODateInputValue(dateObj) {
   if (!dateObj) return "";
 
-  // Se vier do Supabase como string ("2025-12-16" OU "2025-12-16T..."),
-  // retorna direto o YYYY-MM-DD sem passar por Date() (evita fuso)
+  // Supabase geralmente devolve string "YYYY-MM-DD" ou "YYYY-MM-DDTHH:mm:ss..."
   if (typeof dateObj === "string") {
     return dateObj.slice(0, 10);
   }
 
-  // Se vier como número (epoch) ou Date
+  // Se vier como Date ou número (epoch)
   const d = new Date(dateObj);
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 }
+
 
 
 
