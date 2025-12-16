@@ -1711,7 +1711,7 @@ function bindPageEvents() {
       const observacoes = document.getElementById("ped-obs")?.value?.trim() || null;
 
       const valor = Number(document.getElementById("ped-valor")?.value || 0);
-      const data = document.getElementById("ped-data")?.value || todayISO();
+      const data = document.getElementById("ped-data").value = p.data ? toISODateInputValue(p.data) : todayISO();
       const statusUI = document.getElementById("ped-status")?.value || "Recebido";
 
       if (!cliente_id) return alert("Selecione o cliente.");
@@ -1780,7 +1780,7 @@ function bindPageEvents() {
       const id = Number(document.getElementById("desp-id")?.value || 0) || null;
       const descricao = document.getElementById("desp-desc")?.value?.trim();
       const valor = Number(document.getElementById("desp-valor")?.value || 0);
-      const dataInput = document.getElementById("desp-data")?.value;
+      const dataInput = document.getElementById("desp-data").value = d.data ? toISODateInputValue(d.data) : todayISO();
 
       if (!descricao) return alert("Informe a descrição.");
       if (!valor || valor <= 0) return alert("Informe um valor válido.");
