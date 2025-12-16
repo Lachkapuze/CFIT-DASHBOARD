@@ -598,7 +598,7 @@ async function deleteClienteDB(id) {
 async function getKitsDB() {
   const { data, error } = await sb
     .from('kits')
-    .select('id,nome,quantidade,ativo,created_at')
+    .select('id,nome,quantidade,quantidade_itens,ativo,created_at')
     .eq('ativo', true)
     .order('quantidade', { ascending: true })
     .order('nome', { ascending: true });
@@ -742,7 +742,10 @@ function renderPedidos() {
 
 function renderKits() {
   const kitsOptions = (app.data.kits || [])
-    .map(k => `<option value="${k.id}">${escapeHtml(k.nome)} (${k.quantidade})</option>`)
+    .map(k => {
+      const qtd = (k.quantidade_itens ?? k.quantidade ?? 0);
+      return `<option value="${k.id}">${escapeHtml(k.nome)} (${escapeHtml(qtd)})</option>`;
+    })
     .join("");
 
   const opcoesRows = (app.data.kit_opcoes || []).map(o => {
@@ -1100,24 +1103,27 @@ async function deleteDespesaDB(id) {
 
 // Função para inserir ou atualizar KIT
 async function upsertKit(payload) {
+  const qtd = Number(payload.quantidade || payload.quantidade_itens || 0);
+
   const dataToSave = {
     nome: payload.nome,
-    quantidade: payload.quantidade,
+    // compatibilidade: alguns bancos usam "quantidade", outros "quantidade_itens"
+    quantidade: qtd,
+    quantidade_itens: qtd,
     ativo: payload.ativo ?? true,
   };
 
   let query = sb.from("kits");
 
   if (payload.id) {
-    // UPDATE
     const { error } = await query.update(dataToSave).eq("id", payload.id);
     if (error) throw error;
   } else {
-    // INSERT
     const { error } = await query.insert([dataToSave]);
     if (error) throw error;
   }
 }
+
 
 async function deleteKitOpcaoDB(id) {
   const { error } = await sb.from("kit_opcoes").delete().eq("id", String(id));
