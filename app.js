@@ -267,7 +267,7 @@ function renderPedidoDetailsHTML(p) {
       <div>
         <div class="cfit-chip">📅 <strong>${escapeHtml(dataLabel)}</strong></div>
         <div class="cfit-chip">🧾 Status: <strong>${escapeHtml(statusLabel)}</strong></div>
-        <div class="cfit-chip">💰 <strong>${escapeHtml(valorLabel)}</strong></div>
+        ${app.role === "admin" ? `<div class="cfit-chip">💰 <strong>${escapeHtml(valorLabel)}</strong></div>` : ""}
         <div class="cfit-chip">🍱 Qtd: <strong>7 marmitas</strong></div>
         <div class="cfit-hr"></div>
 
@@ -1022,7 +1022,7 @@ function renderPedidos() {
                       <th>Data</th>
                       <th>Cliente</th>
                       <th>Cardápio</th>
-                      <th>Valor</th>
+                      ${app.role === "admin" ? "<th>Valor</th>" : ""}
                       <th>Status</th>
                       <th>Ações</th>
                     </tr>
@@ -1039,7 +1039,7 @@ function renderPedidos() {
                             <td>${escapeHtml(dataStr)}</td>
                             <td>${escapeHtml(nomeCli)}</td>
                             <td>${escapeHtml(nomeCard)}</td>
-                            <td>${formatCurrency(p.valor)}</td>
+                            ${app.role === "admin" ? `<td>${formatCurrency(p.valor)}</td>` : ""}
                             <td>${escapeHtml(p.status)}</td>
                             <td style="white-space:nowrap;">
   <button class="btn btn-small btn-secondary" data-act="ped-view" data-id="${p.id}">Detalhes</button>
