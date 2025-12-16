@@ -1287,7 +1287,9 @@ function bindPageEvents() {
     });
   }
 
-  // KIT (navegação)
+ // ===============================
+// KITS (FORM) - ÚNICO BLOCO
+// ===============================
 const kitForm = document.getElementById("kit-form");
 if (kitForm) {
   kitForm.addEventListener("submit", async (e) => {
@@ -1296,14 +1298,14 @@ if (kitForm) {
     const id = document.getElementById("kit-id")?.value?.trim() || null;
     const nome = document.getElementById("kit-nome")?.value?.trim();
     const quantidade = Number(document.getElementById("kit-quantidade")?.value || 0);
-    const ativo = document.getElementById("kit-ativo")?.checked;
+    const ativo = !!document.getElementById("kit-ativo")?.checked;
 
-    if (!nome) return alert("Informe o nome do Kit.");
-    if (!quantidade) return alert("Informe a quantidade do Kit.");
+    if (!nome) return alert("Informe o nome do kit.");
+    if (!quantidade || quantidade <= 0) return alert("Informe uma quantidade válida.");
 
     try {
       await upsertKit({ id, nome, quantidade, ativo });
-      await loadKits(); // Carregar Kits novamente
+      await loadKits();
       resetKitForm();
       renderApp();
     } catch (err) {
@@ -1465,46 +1467,7 @@ if (estForm) {
 const estReset = document.getElementById("est-reset");
 if (estReset) estReset.addEventListener("click", () => resetEstoqueForm());
 
-  // ===============================
-// KITS (FORM)
-// ===============================
-const kitForm = document.getElementById("kit-form");
-if (kitForm) {
-  kitForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
 
-    const id = document.getElementById("kit-id")?.value?.trim() || null;
-    const nome = document.getElementById("kit-nome")?.value?.trim();
-    const quantidade = Number(document.getElementById("kit-quantidade")?.value || 0);
-    const ativo = !!document.getElementById("kit-ativo")?.checked;
-
-    if (!nome) return alert("Informe o nome do kit.");
-    if (!quantidade || quantidade <= 0) return alert("Informe uma quantidade válida.");
-
-    try {
-      await upsertKit({ id, nome, quantidade, ativo });
-      await loadKits();
-      renderApp();
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao salvar kit: " + (err?.message || err));
-    }
-  });
-}
-
-const kitReset = document.getElementById("kit-reset");
-if (kitReset) {
-  kitReset.addEventListener("click", () => {
-    const id = document.getElementById("kit-id");
-    const nome = document.getElementById("kit-nome");
-    const qtd = document.getElementById("kit-quantidade");
-    const ativo = document.getElementById("kit-ativo");
-    if (id) id.value = "";
-    if (nome) nome.value = "";
-    if (qtd) qtd.value = "";
-    if (ativo) ativo.checked = true;
-  });
-}
 
 // ===============================
 // OPÇÕES DO KIT (FORM)
@@ -1726,6 +1689,25 @@ function resetEstoqueForm() {
   if (title) title.textContent = "Novo Item";
   if (submit) submit.textContent = "Salvar";
 }
+
+function resetKitForm() {
+  const id = document.getElementById("kit-id");
+  const nome = document.getElementById("kit-nome");
+  const qtd = document.getElementById("kit-quantidade");
+  const ativo = document.getElementById("kit-ativo");
+
+  const title = document.getElementById("kit-title");
+  const submit = document.getElementById("kit-submit");
+
+  if (id) id.value = "";
+  if (nome) nome.value = "";
+  if (qtd) qtd.value = "";
+  if (ativo) ativo.checked = true;
+
+  if (title) title.textContent = "Novo Kit";
+  if (submit) submit.textContent = "Salvar";
+}
+
 
  function fillEstoqueForm(id) {
   const i = app.data.ingredientes.find((x) => String(x.id) === String(id));
