@@ -1648,13 +1648,15 @@ const cliReset = document.getElementById("cli-reset");
 if (cliReset) cliReset.addEventListener("click", () => resetClienteForm());
 
     // PEDIDOS
- const pedForm = document.getElementById("ped-form");
+// PEDIDOS
+const pedForm = document.getElementById("ped-form");
 if (pedForm) {
   // botões 7/14/28 (1/2/4 pedidos)
   const setMult = (n) => {
     const multEl = document.getElementById("ped-mult");
     if (multEl) multEl.value = String(n);
   };
+
   document.getElementById("ped-mult-1")?.addEventListener("click", () => setMult(1));
   document.getElementById("ped-mult-2")?.addEventListener("click", () => setMult(2));
   document.getElementById("ped-mult-4")?.addEventListener("click", () => setMult(4));
@@ -1694,12 +1696,11 @@ if (pedForm) {
     };
 
     try {
-      // ✅ edição: atualiza 1 pedido só (não duplica)
       if (id) {
         await upsertPedido(payloadBase);
       } else {
-        // ✅ novo: duplica 2 ou 4 pedidos iguais
         const mult = Number(document.getElementById("ped-mult")?.value || 1) || 1;
+
         const inserts = Array.from({ length: mult }, () => ({
           cliente_id: payloadBase.cliente_id,
           cardapio_id: payloadBase.cardapio_id,
@@ -1723,6 +1724,7 @@ if (pedForm) {
     }
   });
 }
+
 
 
 
