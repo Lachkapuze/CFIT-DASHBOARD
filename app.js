@@ -659,11 +659,21 @@ function bindNav() {
     el.addEventListener("click", () => {
       const page = el.dataset.page;
       if (!page) return;
+
+      // ✅ segurança: se role não carregou por algum motivo, assume admin
+      const role = app.role || "admin";
+
+      // ✅ cozinha: só pode abrir PEDIDOS
+      if (role === "cozinha" && page !== "pedidos") {
+        return; // não faz nada mesmo
+      }
+
       app.currentPage = page;
       renderApp();
     });
   });
 }
+
 
 // ===============================
 // 10) DASHBOARD
