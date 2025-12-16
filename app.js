@@ -569,6 +569,33 @@ async function deleteClienteDB(id) {
   if (error) throw error;
 }
 
+// ===============================
+// KITS (DB HELPERS)
+// ===============================
+async function getKitsDB() {
+  const { data, error } = await sb
+    .from('kits')
+    .select('id,nome,quantidade,ativo,created_at')
+    .eq('ativo', true)
+    .order('quantidade', { ascending: true })
+    .order('nome', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+async function getKitOpcoesDB(kit_id) {
+  if (!kit_id) return [];
+  const { data, error } = await sb
+    .from('kit_opcoes')
+    .select('id,kit_id,titulo,descricao,created_at')
+    .eq('kit_id', kit_id)
+    .order('titulo', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
 
 // ===============================
 // 12) PEDIDOS (CRUD)
@@ -595,6 +622,20 @@ function renderPedidos() {
               <select class="form-input" id="ped-cliente">
                 <option value="">Selecione</option>
                 ${clientesOptions}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Kit</label>
+              <select class="form-input" id="ped-kit">
+                <option value="">Carregando...</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Opção do Kit</label>
+              <select class="form-input" id="ped-kit-opcao">
+                <option value="">Selecione um kit primeiro</option>
               </select>
             </div>
 
@@ -650,7 +691,7 @@ function renderPedidos() {
                       .map((p) => {
                         const dt = p.data ? new Date(p.data) : null;
                         const dataStr = dt ? dt.toLocaleDateString("pt-BR") : "-";
-                        const nome = p.cliente_nome || p.clienteNome || p.cliente_nome || "";
+                        const nome = p.cliente_nome || p.clienteNome || "";
                         return `
                           <tr>
                             <td>${escapeHtml(dataStr)}</td>
@@ -676,14 +717,80 @@ function renderPedidos() {
   `;
 }
 
+// ===============================
+// PEDIDOS - UI: KITS + OPÇÕES (ROBUSTO)
+// ===============================
+function $id(...ids) {
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (el) return el;
+  }
+  return null;
+}
+
+function escapeHtmlCFIT(str) {
+  return String(str ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+async function hydratePedidoKitsUI({ presetKitId = '', presetOpcaoTitulo = '' } = {}) {
+  // aceita IDs nos 2 padrões: pedido-* e ped-*
+  const kitSelect = $id('pedido-kit', 'ped-kit');
+  const opcaoSelect = $id('pedido-kit-opcao', 'ped-kit-opcao', 'pedido-opcao-kit');
+
+  if (!kitSelect || !opcaoSelect) return;
+
+  // Carrega kits
+  const kits = await getKitsDB();
+
+  kitSelect.innerHTML = `
+    <option value="">Selecione um kit</option>
+    ${kits.map(k => `<option value="${k.id}">${escapeHtmlCFIT(`${k.nome} (${k.quantidade})`)}</option>`).join('')}
+  `;
+
+  if (presetKitId) kitSelect.value = presetKitId;
+
+  async function loadOpcoes() {
+    const kitId = kitSelect.value || '';
+    const opcoes = await getKitOpcoesDB(kitId);
+
+    opcaoSelect.innerHTML = `
+      <option value="">Selecione a opção</option>
+      ${opcoes.map(o =>
+        `<option value="${escapeHtmlCFIT(o.titulo)}">${escapeHtmlCFIT(`${o.titulo} — ${o.descricao}`)}</option>`
+      ).join('')}
+    `;
+
+    if (presetOpcaoTitulo) opcaoSelect.value = presetOpcaoTitulo;
+  }
+
+  await loadOpcoes();
+
+  kitSelect.onchange = async () => {
+    presetOpcaoTitulo = '';
+    await loadOpcoes();
+  };
+}
+
+
+
 async function upsertPedido(payload) {
-  const dataToSave = {
+const dataToSave = {
   cliente_id: payload.cliente_id,
   valor: payload.valor,
-  valor_total: payload.valor,  // <<< ADICIONA ISSO
+  valor_total: payload.valor, // mantém
   data: payload.data,
-  status: payload.status
+  status: payload.status,
+
+  // ✅ NOVO: Kit escolhido no pedido
+  kit_id: payload.kit_id || null,
+  kit_opcao_titulo: payload.kit_opcao_titulo || null
 };
+
 
 
   if (payload.id) {
@@ -980,40 +1087,57 @@ const cliReset = document.getElementById("cli-reset");
 if (cliReset) cliReset.addEventListener("click", () => resetClienteForm());
 
   // PEDIDOS
-  const pedForm = document.getElementById("ped-form");
+const pedForm = document.getElementById("ped-form");
+
+// 👉 PASSO 4: carregar Kits e Opções quando a tela abrir
+if (pedForm) {
+  hydratePedidoKitsUI();
+}
+
 if (pedForm) {
   pedForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    const id = document.getElementById("ped-id")?.value?.trim() || null;
-    const cliente_id = document.getElementById("ped-cliente")?.value?.trim() || "";
-    const valor = Number(document.getElementById("ped-valor")?.value || 0);
-    const data = document.getElementById("ped-data")?.value || todayISO();
-    const statusUI = document.getElementById("ped-status")?.value || "Recebido";
+  const id = document.getElementById("ped-id").value.trim() || null;
+  const cliente_id = document.getElementById("ped-cliente").value.trim() || "";
+  const valor = Number(document.getElementById("ped-valor").value || 0);
+  const data = document.getElementById("ped-data").value || todayISO();
+  const statusUI = document.getElementById("ped-status").value || "Recebido";
 
-const status = {
-  "Recebido": "recebido",
-  "Preparando": "preparando",
-  "Pronto": "pronto",
-  "Entregue": "entregue",
-  "Cancelado": "cancelado"
-}[statusUI] || "recebido";
+  // ✅ NOVO: Kit e Opção do Kit
+  const kit_id = document.getElementById("ped-kit")?.value || null;
+  const kit_opcao_titulo = document.getElementById("ped-kit-opcao")?.value || null;
 
+  const statusMap = {
+    "Recebido": "recebido",
+    "Preparando": "preparando",
+    "Pronto": "pronto",
+    "Entregue": "entregue",
+    "Cancelado": "cancelado"
+  };
 
-    if (!cliente_id) return alert("Selecione um cliente.");
-    if (!valor || valor <= 0) return alert("Informe um valor válido.");
+  const payload = {
+    id,
+    cliente_id,
+    valor,
+    data,
+    status: statusMap[statusUI] || "recebido",
+    kit_id,
+    kit_opcao_titulo
+  };
 
-    try {
-      await upsertPedido({ id, cliente_id, valor, data, status });
-      await loadPedidos();
-      resetPedidoForm();
-      renderApp();
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao salvar pedido: " + (err?.message || err));
-    }
-  });
-}
+  try {
+    await upsertPedido(payload);
+
+    // ✅ mantém seu padrão atual: você já faz isso no seu projeto depois de salvar
+    await loadPedidos(); // se no seu código o nome for diferente, troque só esta linha
+    renderApp();
+  } catch (err) {
+    console.error(err);
+    alert(err?.message || "Erro ao salvar pedido.");
+  }
+});
+
 
 const pedReset = document.getElementById("ped-reset");
 if (pedReset) pedReset.addEventListener("click", () => resetPedidoForm());
