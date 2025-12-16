@@ -1782,7 +1782,8 @@ function bindPageEvents() {
       if (!descricao) return alert("Informe a descrição.");
       if (!valor || valor <= 0) return alert("Informe um valor válido.");
 
-      const dataISO = new Date((dataInput || todayISO()) + "T12:00:00").toISOString();
+      const dataISO = (dataInput || todayISO()); // "YYYY-MM-DD"
+
 
       try {
         await upsertDespesa({ id, descricao, valor, data: dataISO });
