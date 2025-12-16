@@ -641,7 +641,7 @@ async function getKitOpcoesDB(kit_id) {
 // 12) PEDIDOS (CRUD)
 // ===============================
 function renderPedidos() {
-  const clientesOptions = app.data.clientes
+  const clientesOptions = (app.data.clientes || [])
     .map((c) => `<option value="${c.id}">${escapeHtml(c.nome)}</option>`)
     .join("");
 
@@ -649,6 +649,11 @@ function renderPedidos() {
     .filter(c => c.ativo)
     .map(c => `<option value="${c.id}">${escapeHtml(c.nome)}</option>`)
     .join("");
+
+  const cardapioNomeById = (id) => {
+    const c = (app.data.cardapios || []).find(x => String(x.id) === String(id));
+    return c ? c.nome : "-";
+  };
 
   return `
     <h2>Pedidos</h2>
@@ -658,9 +663,11 @@ function renderPedidos() {
         <div class="card-header">
           <h3 class="card-title" id="ped-title">Novo Pedido</h3>
         </div>
+
         <div class="card-content">
           <form id="ped-form">
             <input type="hidden" id="ped-id" />
+            <input type="hidden" id="ped-mult" value="1" />
 
             <div class="form-group">
               <label class="form-label">Cliente</label>
@@ -670,7 +677,6 @@ function renderPedidos() {
               </select>
             </div>
 
-            <!-- ✅ CARDÁPIO -->
             <div class="form-group">
               <label class="form-label">Cardápio (7 marmitas)</label>
               <select class="form-input" id="ped-cardapio">
@@ -680,24 +686,18 @@ function renderPedidos() {
             </div>
 
             <div class="form-group">
+              <label class="form-label">Observações (opcional)</label>
+              <textarea class="form-input" id="ped-obs" rows="3" placeholder="Ex: Sem cebola, trocar arroz por batata, etc..."></textarea>
+            </div>
+
+            <div class="form-group">
               <label class="form-label">Valor (R$)</label>
-              <input
-                class="form-input"
-                id="ped-valor"
-                type="number"
-                step="0.01"
-                placeholder="Ex: 105.00"
-              >
+              <input class="form-input" id="ped-valor" type="number" step="0.01" placeholder="Ex: 105.00">
             </div>
 
             <div class="form-group">
               <label class="form-label">Data</label>
-              <input
-                class="form-input"
-                id="ped-data"
-                type="date"
-                value="${todayISO()}"
-              >
+              <input class="form-input" id="ped-data" type="date" value="${todayISO()}">
             </div>
 
             <div class="form-group">
@@ -711,13 +711,20 @@ function renderPedidos() {
               </select>
             </div>
 
+            <!-- ✅ BOTÕES RÁPIDOS 7/14/28 -->
+            <div class="flex gap-2" style="margin-bottom:.75rem;">
+              <button class="btn btn-secondary btn-block" type="button" id="ped-mult-1">7 (1 kit)</button>
+              <button class="btn btn-secondary btn-block" type="button" id="ped-mult-2">14 (2 kits)</button>
+              <button class="btn btn-secondary btn-block" type="button" id="ped-mult-4">28 (4 kits)</button>
+            </div>
+
             <div class="flex gap-2">
-              <button class="btn btn-primary btn-block" type="submit" id="ped-submit">
-                Salvar
-              </button>
-              <button class="btn btn-secondary btn-block" type="button" id="ped-reset">
-                Limpar
-              </button>
+              <button class="btn btn-primary btn-block" type="submit" id="ped-submit">Salvar</button>
+              <button class="btn btn-secondary btn-block" type="button" id="ped-reset">Limpar</button>
+            </div>
+
+            <div style="margin-top:.6rem; opacity:.75; font-size:12px;">
+              Dica: 14 e 28 criam automaticamente 2 ou 4 pedidos iguais (cada um = 7 marmitas).
             </div>
           </form>
         </div>
@@ -727,45 +734,48 @@ function renderPedidos() {
         <div class="card-header">
           <h3 class="card-title">Lista de Pedidos</h3>
         </div>
+
         <div class="card-content">
           ${
-            app.data.pedidos.length
+            (app.data.pedidos || []).length
               ? `
                 <table class="table">
                   <thead>
                     <tr>
                       <th>Data</th>
                       <th>Cliente</th>
+                      <th>Cardápio</th>
                       <th>Valor</th>
                       <th>Status</th>
                       <th>Ações</th>
                     </tr>
                   </thead>
                   <tbody>
-                    ${app.data.pedidos
+                    ${(app.data.pedidos || [])
                       .map((p) => {
                         const dt = p.data ? new Date(p.data) : null;
                         const dataStr = dt ? dt.toLocaleDateString("pt-BR") : "-";
-                        const nome = p.cliente_nome || p.clienteNome || "";
+                        const nomeCli = p.cliente_nome || p.clienteNome || "";
+                        const nomeCard = cardapioNomeById(p.cardapio_id);
                         return `
                           <tr>
                             <td>${escapeHtml(dataStr)}</td>
-                            <td>${escapeHtml(nome)}</td>
+                            <td>${escapeHtml(nomeCli)}</td>
+                            <td>${escapeHtml(nomeCard)}</td>
                             <td>${formatCurrency(p.valor)}</td>
                             <td>${escapeHtml(p.status)}</td>
                             <td style="white-space:nowrap;">
-                              <button
-                                class="btn btn-small btn-secondary"
-                                data-act="ped-edit"
-                                data-id="${p.id}"
-                              >Editar</button>
-                              <button
-                                class="btn btn-small btn-danger"
-                                data-act="ped-del"
-                                data-id="${p.id}"
-                              >Excluir</button>
+                              <button class="btn btn-small btn-secondary" data-act="ped-edit" data-id="${p.id}">Editar</button>
+                              <button class="btn btn-small btn-danger" data-act="ped-del" data-id="${p.id}">Excluir</button>
                             </td>
                           </tr>
+                          ${
+                            p.observacoes
+                              ? `<tr><td colspan="6" style="opacity:.8; font-size:12px; padding-top:0;">
+                                   <strong>Obs:</strong> ${escapeHtml(String(p.observacoes).slice(0, 160))}
+                                 </td></tr>`
+                              : ""
+                          }
                         `;
                       })
                       .join("")}
@@ -779,6 +789,7 @@ function renderPedidos() {
     </div>
   `;
 }
+
 
 function renderKits() {
   const kitsOptions = (app.data.kits || [])
@@ -1050,17 +1061,30 @@ async function deleteCardapioItemDB(id) {
 
 
 async function upsertPedido(payload) {
-const dataToSave = {
-  cliente_id: payload.cliente_id,
-  valor: payload.valor,
-  valor_total: payload.valor, // mantém
-  data: payload.data,
-  status: payload.status,
+  const dataToSave = {
+    cliente_id: payload.cliente_id,
+    valor: payload.valor,
+    valor_total: payload.valor, // mantém (se você usa no dashboard)
+    data: payload.data,
+    status: payload.status,
 
-  // ✅ NOVO: Kit escolhido no pedido
-  kit_id: payload.kit_id || null,
-  kit_opcao_titulo: payload.kit_opcao_titulo || null
-};
+    // ✅ NOVO
+    cardapio_id: payload.cardapio_id || null,
+    observacoes: payload.observacoes || null,
+  };
+
+  if (payload.id) {
+    const { error } = await sb
+      .from("pedidos")
+      .update(dataToSave)
+      .eq("id", String(payload.id));
+    if (error) throw error;
+  } else {
+    const { error } = await sb.from("pedidos").insert([dataToSave]);
+    if (error) throw error;
+  }
+}
+
 
 
 
@@ -1624,14 +1648,25 @@ const cliReset = document.getElementById("cli-reset");
 if (cliReset) cliReset.addEventListener("click", () => resetClienteForm());
 
     // PEDIDOS
-  const pedForm = document.getElementById("ped-form");
+ const pedForm = document.getElementById("ped-form");
 if (pedForm) {
+  // botões 7/14/28 (1/2/4 pedidos)
+  const setMult = (n) => {
+    const multEl = document.getElementById("ped-mult");
+    if (multEl) multEl.value = String(n);
+  };
+  document.getElementById("ped-mult-1")?.addEventListener("click", () => setMult(1));
+  document.getElementById("ped-mult-2")?.addEventListener("click", () => setMult(2));
+  document.getElementById("ped-mult-4")?.addEventListener("click", () => setMult(4));
+
   pedForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const id = document.getElementById("ped-id")?.value?.trim() || null;
     const cliente_id = document.getElementById("ped-cliente")?.value || "";
     const cardapio_id = document.getElementById("ped-cardapio")?.value || null;
+    const observacoes = document.getElementById("ped-obs")?.value?.trim() || null;
+
     const valor = Number(document.getElementById("ped-valor")?.value || 0);
     const data = document.getElementById("ped-data")?.value || todayISO();
     const statusUI = document.getElementById("ped-status")?.value || "Recebido";
@@ -1648,17 +1683,37 @@ if (pedForm) {
       Cancelado: "cancelado",
     };
 
-    const payload = {
+    const payloadBase = {
       id,
       cliente_id,
-      cardapio_id, // ✅ NOVO (7 marmitas implícito)
+      cardapio_id,
+      observacoes,
       valor,
       data,
       status: statusMap[statusUI] || "recebido",
     };
 
     try {
-      await upsertPedido(payload);
+      // ✅ edição: atualiza 1 pedido só (não duplica)
+      if (id) {
+        await upsertPedido(payloadBase);
+      } else {
+        // ✅ novo: duplica 2 ou 4 pedidos iguais
+        const mult = Number(document.getElementById("ped-mult")?.value || 1) || 1;
+        const inserts = Array.from({ length: mult }, () => ({
+          cliente_id: payloadBase.cliente_id,
+          cardapio_id: payloadBase.cardapio_id,
+          observacoes: payloadBase.observacoes,
+          valor: payloadBase.valor,
+          valor_total: payloadBase.valor,
+          data: payloadBase.data,
+          status: payloadBase.status,
+        }));
+
+        const { error } = await sb.from("pedidos").insert(inserts);
+        if (error) throw error;
+      }
+
       await loadPedidos();
       resetPedidoForm();
       renderApp();
@@ -1668,6 +1723,7 @@ if (pedForm) {
     }
   });
 }
+
 
 
   const pedReset = document.getElementById("ped-reset");
@@ -1982,7 +2038,10 @@ function resetPedidoForm() {
   const st = document.getElementById("ped-status");
   const title = document.getElementById("ped-title");
   const submit = document.getElementById("ped-submit");
-
+  const card = document.getElementById("ped-cardapio");
+  const obs = document.getElementById("ped-obs");
+  const mult = document.getElementById("ped-mult");
+  
   if (id) id.value = "";
   if (cli) cli.value = "";
   if (val) val.value = "";
@@ -1990,6 +2049,9 @@ function resetPedidoForm() {
   if (st) st.value = "Recebido";
   if (title) title.textContent = "Novo Pedido";
   if (submit) submit.textContent = "Salvar";
+  if (card) card.value = "";
+  if (obs) obs.value = "";
+  if (mult) mult.value = "1";
 }
 
 function fillPedidoForm(id) {
