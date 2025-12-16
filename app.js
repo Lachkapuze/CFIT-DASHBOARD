@@ -1042,9 +1042,10 @@ function renderPedidos() {
                             <td>${formatCurrency(p.valor)}</td>
                             <td>${escapeHtml(p.status)}</td>
                             <td style="white-space:nowrap;">
-                              <button class="btn btn-small btn-secondary" data-act="ped-edit" data-id="${p.id}">Editar</button>
-                              <button class="btn btn-small btn-danger" data-act="ped-del" data-id="${p.id}">Excluir</button>
-                            </td>
+  <button class="btn btn-small btn-secondary" data-act="ped-view" data-id="${p.id}">Detalhes</button>
+  ${app.role === "admin" ? `<button class="btn btn-small btn-secondary" data-act="ped-edit" data-id="${p.id}">Editar</button>` : ""}
+  ${app.role === "admin" ? `<button class="btn btn-small btn-danger" data-act="ped-del" data-id="${p.id}">Excluir</button>` : ""}
+</td>
                           </tr>
                           ${
                             p.observacoes
