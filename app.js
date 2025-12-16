@@ -84,17 +84,20 @@ function formatCurrency(value) {
 function toISODateInputValue(dateObj) {
   if (!dateObj) return "";
 
+  // Se vier do Supabase como string ("2025-12-16" OU "2025-12-16T..."),
+  // retorna direto o YYYY-MM-DD sem passar por Date() (evita fuso)
+  if (typeof dateObj === "string") {
+    return dateObj.slice(0, 10);
+  }
+
+  // Se vier como número (epoch) ou Date
   const d = new Date(dateObj);
-
-  // corrige o offset de fuso horário
-  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
-
-  const yyyy = local.getFullYear();
-  const mm = String(local.getMonth() + 1).padStart(2, "0");
-  const dd = String(local.getDate()).padStart(2, "0");
-
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 }
+
 
 
 function startOfMonthISO() {
