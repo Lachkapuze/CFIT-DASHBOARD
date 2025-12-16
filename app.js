@@ -1086,61 +1086,59 @@ if (cliForm) {
 const cliReset = document.getElementById("cli-reset");
 if (cliReset) cliReset.addEventListener("click", () => resetClienteForm());
 
-  // PEDIDOS
-const pedForm = document.getElementById("ped-form");
+    // PEDIDOS
+  const pedForm = document.getElementById("ped-form");
 
-// 👉 PASSO 4: carregar Kits e Opções quando a tela abrir
-if (pedForm) {
-  hydratePedidoKitsUI();
-}
+  if (pedForm) {
+    // 👉 PASSO 4: carregar Kits e Opções quando a tela abrir
+    hydratePedidoKitsUI();
 
-if (pedForm) {
-  pedForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
+    pedForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-  const id = document.getElementById("ped-id").value.trim() || null;
-  const cliente_id = document.getElementById("ped-cliente").value.trim() || "";
-  const valor = Number(document.getElementById("ped-valor").value || 0);
-  const data = document.getElementById("ped-data").value || todayISO();
-  const statusUI = document.getElementById("ped-status").value || "Recebido";
+      const id = document.getElementById("ped-id").value.trim() || null;
+      const cliente_id = document.getElementById("ped-cliente").value.trim() || "";
+      const valor = Number(document.getElementById("ped-valor").value || 0);
+      const data = document.getElementById("ped-data").value || todayISO();
+      const statusUI = document.getElementById("ped-status").value || "Recebido";
 
-  // ✅ NOVO: Kit e Opção do Kit
-  const kit_id = document.getElementById("ped-kit")?.value || null;
-  const kit_opcao_titulo = document.getElementById("ped-kit-opcao")?.value || null;
+      // ✅ NOVO: Kit e Opção do Kit
+      const kit_id = document.getElementById("ped-kit")?.value || null;
+      const kit_opcao_titulo = document.getElementById("ped-kit-opcao")?.value || null;
 
-  const statusMap = {
-    "Recebido": "recebido",
-    "Preparando": "preparando",
-    "Pronto": "pronto",
-    "Entregue": "entregue",
-    "Cancelado": "cancelado"
-  };
+      const statusMap = {
+        "Recebido": "recebido",
+        "Preparando": "preparando",
+        "Pronto": "pronto",
+        "Entregue": "entregue",
+        "Cancelado": "cancelado",
+      };
 
-  const payload = {
-    id,
-    cliente_id,
-    valor,
-    data,
-    status: statusMap[statusUI] || "recebido",
-    kit_id,
-    kit_opcao_titulo
-  };
+      const payload = {
+        id,
+        cliente_id,
+        valor,
+        data,
+        status: statusMap[statusUI] || "recebido",
+        kit_id,
+        kit_opcao_titulo,
+      };
 
-  try {
-    await upsertPedido(payload);
-
-    // ✅ mantém seu padrão atual: você já faz isso no seu projeto depois de salvar
-    await loadPedidos(); // se no seu código o nome for diferente, troque só esta linha
-    renderApp();
-  } catch (err) {
-    console.error(err);
-    alert(err?.message || "Erro ao salvar pedido.");
+      try {
+        await upsertPedido(payload);
+        await loadPedidos();
+        resetPedidoForm();
+        renderApp();
+      } catch (err) {
+        console.error(err);
+        alert(err?.message || "Erro ao salvar pedido.");
+      }
+    });
   }
-});
 
+  const pedReset = document.getElementById("ped-reset");
+  if (pedReset) pedReset.addEventListener("click", () => resetPedidoForm());
 
-const pedReset = document.getElementById("ped-reset");
-if (pedReset) pedReset.addEventListener("click", () => resetPedidoForm());
 
 
   // DESPESAS
