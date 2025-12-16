@@ -49,6 +49,7 @@ const app = {
     despesas: [],
     ingredientes: [],
     kits: [],
+kit_opcoes: [],
     compras_insumos: [], // opcional (se existir no banco)
   },
   filtro: {
@@ -230,6 +231,13 @@ async function loadKits() {
   app.data.kits = (data || []).sort(sortByCreatedAtOrIdDesc);
 }
 
+async function loadKitOpcoes() {
+  const { data, error } = await sb.from("kit_opcoes").select("*");
+  if (error) throw error;
+  app.data.kit_opcoes = (data || []).sort(sortByCreatedAtOrIdDesc);
+}
+
+
 
 async function loadAllData() {
   await Promise.all([
@@ -238,6 +246,7 @@ async function loadAllData() {
     loadDespesas(),
     loadIngredientes(),
     loadKits(),
+    loadKitOpcoes(),
     loadComprasInsumosIfExists(),
   ]);
 }
@@ -732,13 +741,28 @@ function renderPedidos() {
 }
 
 function renderKits() {
-  const kitsOptions = app.data.kits
-    .map((k) => `<option value="${k.id}">${escapeHtml(k.nome)}</option>`)
+  const kitsOptions = (app.data.kits || [])
+    .map(k => `<option value="${k.id}">${escapeHtml(k.nome)} (${k.quantidade})</option>`)
     .join("");
+
+  const opcoesRows = (app.data.kit_opcoes || []).map(o => {
+    const kit = (app.data.kits || []).find(k => String(k.id) === String(o.kit_id));
+    return `
+      <tr>
+        <td>${escapeHtml(kit ? kit.nome : "-")}</td>
+        <td>${escapeHtml(o.titulo || "")}</td>
+        <td>${escapeHtml(o.descricao || "")}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-small btn-danger" data-act="kop-del" data-id="${o.id}">Excluir</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
 
   return `
     <h2>Kits</h2>
 
+    <!-- ====== KITS ====== -->
     <div class="grid grid-2" style="margin-top:1.25rem;">
       <div class="card">
         <div class="card-header">
@@ -755,16 +779,16 @@ function renderKits() {
 
             <div class="form-group">
               <label class="form-label">Quantidade</label>
-              <input class="form-input" id="kit-quantidade" type="number" step="1" placeholder="Ex: 7">
+              <input class="form-input" id="kit-quantidade" type="number" step="1">
             </div>
 
             <div class="form-group">
               <label class="form-label">Ativo</label>
-              <input class="form-input" id="kit-ativo" type="checkbox" checked>
+              <input type="checkbox" id="kit-ativo" checked>
             </div>
 
             <div class="flex gap-2">
-              <button class="btn btn-primary btn-block" type="submit" id="kit-submit">Salvar</button>
+              <button class="btn btn-primary btn-block" type="submit">Salvar</button>
               <button class="btn btn-secondary btn-block" type="button" id="kit-reset">Limpar</button>
             </div>
           </form>
@@ -773,47 +797,107 @@ function renderKits() {
 
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title">Lista de Kits</h3>
+          <h3 class="card-title">Kits Cadastrados</h3>
         </div>
         <div class="card-content">
           ${
             app.data.kits.length
               ? `
-                <table class="table">
-                  <thead>
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Qtd</th>
+                    <th>Ativo</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${app.data.kits.map(k => `
                     <tr>
-                      <th>Nome</th>
-                      <th>Quantidade</th>
-                      <th>Ativo</th>
-                      <th>Ações</th>
+                      <td>${escapeHtml(k.nome)}</td>
+                      <td>${k.quantidade}</td>
+                      <td>${k.ativo ? "✅" : "❌"}</td>
+                      <td>
+                        <button class="btn btn-small btn-danger" data-act="kit-del" data-id="${k.id}">Excluir</button>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    ${app.data.kits
-                      .map((k) => {
-                        return `
-                          <tr>
-                            <td>${escapeHtml(k.nome)}</td>
-                            <td>${escapeHtml(k.quantidade)}</td>
-                            <td>${k.ativo ? "✅" : "❌"}</td>
-                            <td style="white-space:nowrap;">
-                              <button class="btn btn-small btn-secondary" data-act="kit-edit" data-id="${k.id}">Editar</button>
-                              <button class="btn btn-small btn-danger" data-act="kit-del" data-id="${k.id}">Excluir</button>
-                            </td>
-                          </tr>
-                        `;
-                      })
-                      .join("")}
-                  </tbody>
-                </table>
+                  `).join("")}
+                </tbody>
+              </table>
               `
               : `<div style="opacity:.7;">Nenhum kit cadastrado.</div>`
           }
         </div>
       </div>
     </div>
+
+    <!-- ====== OPÇÕES DO KIT ====== -->
+    <div class="grid grid-2" style="margin-top:1.25rem;">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Nova Opção de Kit</h3>
+        </div>
+        <div class="card-content">
+          <form id="kop-form">
+            <input type="hidden" id="kop-id" />
+
+            <div class="form-group">
+              <label class="form-label">Kit</label>
+              <select class="form-input" id="kop-kit">
+                <option value="">Selecione</option>
+                ${kitsOptions}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Título</label>
+              <input class="form-input" id="kop-titulo" placeholder="Ex: Cardápio A">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Descrição</label>
+              <input class="form-input" id="kop-desc" placeholder="Ex: Frango + arroz + legumes">
+            </div>
+
+            <div class="flex gap-2">
+              <button class="btn btn-primary btn-block" type="submit">Salvar</button>
+              <button class="btn btn-secondary btn-block" type="button" id="kop-reset">Limpar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Opções Cadastradas</h3>
+        </div>
+        <div class="card-content">
+          ${
+            app.data.kit_opcoes.length
+              ? `
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Kit</th>
+                    <th>Título</th>
+                    <th>Descrição</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${opcoesRows}
+                </tbody>
+              </table>
+              `
+              : `<div style="opacity:.7;">Nenhuma opção cadastrada.</div>`
+          }
+        </div>
+      </div>
+    </div>
   `;
 }
+
 
 
 // ===============================
@@ -1034,6 +1118,12 @@ async function upsertKit(payload) {
     if (error) throw error;
   }
 }
+
+async function deleteKitOpcaoDB(id) {
+  const { error } = await sb.from("kit_opcoes").delete().eq("id", String(id));
+  if (error) throw error;
+}
+
 
 // Função para inserir ou atualizar OPÇÃO DO KIT
 async function upsertKitOpcao(payload) {
@@ -1375,6 +1465,88 @@ if (estForm) {
 const estReset = document.getElementById("est-reset");
 if (estReset) estReset.addEventListener("click", () => resetEstoqueForm());
 
+  // ===============================
+// KITS (FORM)
+// ===============================
+const kitForm = document.getElementById("kit-form");
+if (kitForm) {
+  kitForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const id = document.getElementById("kit-id")?.value?.trim() || null;
+    const nome = document.getElementById("kit-nome")?.value?.trim();
+    const quantidade = Number(document.getElementById("kit-quantidade")?.value || 0);
+    const ativo = !!document.getElementById("kit-ativo")?.checked;
+
+    if (!nome) return alert("Informe o nome do kit.");
+    if (!quantidade || quantidade <= 0) return alert("Informe uma quantidade válida.");
+
+    try {
+      await upsertKit({ id, nome, quantidade, ativo });
+      await loadKits();
+      renderApp();
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao salvar kit: " + (err?.message || err));
+    }
+  });
+}
+
+const kitReset = document.getElementById("kit-reset");
+if (kitReset) {
+  kitReset.addEventListener("click", () => {
+    const id = document.getElementById("kit-id");
+    const nome = document.getElementById("kit-nome");
+    const qtd = document.getElementById("kit-quantidade");
+    const ativo = document.getElementById("kit-ativo");
+    if (id) id.value = "";
+    if (nome) nome.value = "";
+    if (qtd) qtd.value = "";
+    if (ativo) ativo.checked = true;
+  });
+}
+
+// ===============================
+// OPÇÕES DO KIT (FORM)
+// ===============================
+const kopForm = document.getElementById("kop-form");
+if (kopForm) {
+  kopForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const id = document.getElementById("kop-id")?.value?.trim() || null;
+    const kit_id = document.getElementById("kop-kit")?.value?.trim() || "";
+    const titulo = document.getElementById("kop-titulo")?.value?.trim();
+    const descricao = document.getElementById("kop-desc")?.value?.trim() || "";
+
+    if (!kit_id) return alert("Selecione um kit.");
+    if (!titulo) return alert("Informe o título da opção.");
+
+    try {
+      await upsertKitOpcao({ id, kit_id, titulo, descricao });
+      await loadKitOpcoes();
+      renderApp();
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao salvar opção do kit: " + (err?.message || err));
+    }
+  });
+}
+
+const kopReset = document.getElementById("kop-reset");
+if (kopReset) {
+  kopReset.addEventListener("click", () => {
+    const id = document.getElementById("kop-id");
+    const kit = document.getElementById("kop-kit");
+    const titulo = document.getElementById("kop-titulo");
+    const desc = document.getElementById("kop-desc");
+    if (id) id.value = "";
+    if (kit) kit.value = "";
+    if (titulo) titulo.value = "";
+    if (desc) desc.value = "";
+  });
+}
+
 
   // AÇÕES NAS TABELAS (delegação)
    root.querySelectorAll("button[data-act]").forEach((btn) => {
@@ -1412,6 +1584,23 @@ if (estReset) estReset.addEventListener("click", () => resetEstoqueForm());
           renderApp();
           return;
         }
+
+        if (act === "kit-del") {
+  if (!confirm("Excluir kit?")) return;
+  await sb.from("kits").delete().eq("id", String(id));
+  await loadKits();
+  renderApp();
+  return;
+}
+
+if (act === "kop-del") {
+  if (!confirm("Excluir opção do kit?")) return;
+  await sb.from("kit_opcoes").delete().eq("id", String(id));
+  await loadKitOpcoes();
+  renderApp();
+  return;
+}
+
 
         if (act === "est-edit") return fillEstoqueForm(id);
         if (act === "est-del") {
