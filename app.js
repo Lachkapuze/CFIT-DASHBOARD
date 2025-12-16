@@ -96,8 +96,9 @@ function startOfMonthISO() {
 }
 
 function todayISO() {
-  return toISODateInputValue(new Date());
+  return new Date().toLocaleDateString("en-CA");
 }
+
 
 function parseDateRange(ini, fim) {
   if (!ini || !fim) return null;
