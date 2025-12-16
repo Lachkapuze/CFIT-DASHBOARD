@@ -43,6 +43,7 @@ const root = document.getElementById("root");
 // ===============================
 const app = {
   currentPage: "dashboard",
+  role: "admin", // "admin" | "cozinha"
   currentCardapioId: null,
   data: {
     clientes: [],
