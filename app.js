@@ -43,12 +43,15 @@ const root = document.getElementById("root");
 // ===============================
 const app = {
   currentPage: "dashboard",
+  currentCardapioId: null,
   data: {
     clientes: [],
     pedidos: [],
     despesas: [],
     ingredientes: [],
     kits: [],
+    cardapios: [],
+cardapio_itens: [],
 kit_opcoes: [],
     compras_insumos: [], // opcional (se existir no banco)
   },
@@ -237,6 +240,17 @@ async function loadKitOpcoes() {
   app.data.kit_opcoes = (data || []).sort(sortByCreatedAtOrIdDesc);
 }
 
+async function loadCardapios() {
+  const { data, error } = await sb.from("cardapios").select("*");
+  if (error) throw error;
+  app.data.cardapios = (data || []).sort(sortByCreatedAtOrIdDesc);
+}
+
+async function loadCardapioItens() {
+  const { data, error } = await sb.from("cardapio_itens").select("*");
+  if (error) throw error;
+  app.data.cardapio_itens = (data || []).sort(sortByCreatedAtOrIdDesc);
+}
 
 
 async function loadAllData() {
@@ -247,6 +261,8 @@ async function loadAllData() {
     loadIngredientes(),
     loadKits(),
     loadKitOpcoes(),
+    loadCardapios(),
+    loadCardapioItens(),
     loadComprasInsumosIfExists(),
   ]);
 }
@@ -963,6 +979,51 @@ async function hydratePedidoKitsUI({ presetKitId = '', presetOpcaoTitulo = '' } 
   };
 }
 
+async function upsertCardapio(payload) {
+  const dataToSave = {
+    nome: payload.nome,
+    tipo: payload.tipo || "padrao", // 'padrao' | 'personalizado'
+    ativo: payload.ativo ?? true,
+  };
+
+  if (payload.id) {
+    const { error } = await sb.from("cardapios").update(dataToSave).eq("id", String(payload.id));
+    if (error) throw error;
+  } else {
+    const { error } = await sb.from("cardapios").insert([dataToSave]);
+    if (error) throw error;
+  }
+}
+
+async function deleteCardapioDB(id) {
+  const { error } = await sb.from("cardapios").delete().eq("id", String(id));
+  if (error) throw error;
+}
+
+// Itens: 7 dias (1..7). Usa upsert por (cardapio_id,dia_semana) se você criou UNIQUE.
+async function upsertCardapioItem(payload) {
+  const dataToSave = {
+    cardapio_id: payload.cardapio_id,
+    dia_semana: Number(payload.dia_semana),
+    titulo: payload.titulo,
+    descricao: payload.descricao || "",
+  };
+
+  if (payload.id) {
+    const { error } = await sb.from("cardapio_itens").update(dataToSave).eq("id", String(payload.id));
+    if (error) throw error;
+  } else {
+    const { error } = await sb
+      .from("cardapio_itens")
+      .upsert([dataToSave], { onConflict: "cardapio_id,dia_semana" }); // exige UNIQUE
+    if (error) throw error;
+  }
+}
+
+async function deleteCardapioItemDB(id) {
+  const { error } = await sb.from("cardapio_itens").delete().eq("id", String(id));
+  if (error) throw error;
+}
 
 
 async function upsertPedido(payload) {
@@ -1249,6 +1310,188 @@ function renderEstoque() {
   `;
 }
 
+function renderCardapios() {
+  const cardapios = app.data.cardapios || [];
+  const itens = app.data.cardapio_itens || [];
+
+  // selecionado
+  const selectedId =
+    app.currentCardapioId ||
+    (cardapios.length ? cardapios[0].id : null);
+
+  if (!app.currentCardapioId && selectedId) app.currentCardapioId = selectedId;
+
+  const opts = cardapios
+    .map((c) => `<option value="${c.id}" ${String(c.id) === String(selectedId) ? "selected" : ""}>${escapeHtml(c.nome)}</option>`)
+    .join("");
+
+  const itensDoCardapio = selectedId
+    ? itens.filter((i) => String(i.cardapio_id) === String(selectedId)).sort((a,b)=>Number(a.dia_semana)-Number(b.dia_semana))
+    : [];
+
+  const itensRows = itensDoCardapio.length
+    ? itensDoCardapio
+        .map((i) => `
+          <tr>
+            <td>${escapeHtml(i.dia_semana)}</td>
+            <td>${escapeHtml(i.titulo || "")}</td>
+            <td>${escapeHtml(i.descricao || "")}</td>
+            <td style="white-space:nowrap;">
+              <button class="btn btn-small btn-secondary" data-act="citem-edit" data-id="${i.id}">Editar</button>
+              <button class="btn btn-small btn-danger" data-act="citem-del" data-id="${i.id}">Excluir</button>
+            </td>
+          </tr>
+        `)
+        .join("")
+    : "";
+
+  return `
+    <h2>Cardápios</h2>
+
+    <div class="grid grid-2" style="margin-top:1.25rem;">
+      <!-- CARDÁPIOS -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title" id="car-title">Novo Cardápio</h3>
+        </div>
+        <div class="card-content">
+          <form id="car-form">
+            <input type="hidden" id="car-id" />
+
+            <div class="form-group">
+              <label class="form-label">Nome</label>
+              <input class="form-input" id="car-nome" placeholder="Ex: Cardápio 1">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Tipo</label>
+              <select class="form-input" id="car-tipo">
+                <option value="padrao">Padrão</option>
+                <option value="personalizado">Personalizado</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Ativo</label>
+              <input type="checkbox" id="car-ativo" checked>
+            </div>
+
+            <div class="flex gap-2">
+              <button class="btn btn-primary btn-block" type="submit" id="car-submit">Salvar</button>
+              <button class="btn btn-secondary btn-block" type="button" id="car-reset">Limpar</button>
+            </div>
+          </form>
+
+          <div style="margin-top:1rem;">
+            ${
+              cardapios.length
+                ? `
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Tipo</th>
+                      <th>Ativo</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${cardapios
+                      .map(
+                        (c) => `
+                      <tr>
+                        <td>${escapeHtml(c.nome)}</td>
+                        <td>${escapeHtml(c.tipo || "padrao")}</td>
+                        <td>${c.ativo ? "✅" : "❌"}</td>
+                        <td style="white-space:nowrap;">
+                          <button class="btn btn-small btn-secondary" data-act="car-edit" data-id="${c.id}">Editar</button>
+                          <button class="btn btn-small btn-danger" data-act="car-del" data-id="${c.id}">Excluir</button>
+                        </td>
+                      </tr>
+                    `
+                      )
+                      .join("")}
+                  </tbody>
+                </table>
+              `
+                : `<div style="opacity:.7;">Nenhum cardápio cadastrado.</div>`
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- ITENS (1..7) -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Itens do Cardápio (dias 1 a 7)</h3>
+        </div>
+        <div class="card-content">
+          <div class="form-group">
+            <label class="form-label">Cardápio selecionado</label>
+            <select class="form-input" id="car-select">
+              <option value="">Selecione</option>
+              ${opts}
+            </select>
+          </div>
+
+          <form id="citem-form" style="margin-top:1rem;">
+            <input type="hidden" id="citem-id" />
+
+            <div class="grid grid-2">
+              <div class="form-group">
+                <label class="form-label">Dia (1..7)</label>
+                <select class="form-input" id="citem-dia">
+                  ${[1,2,3,4,5,6,7].map(d=>`<option value="${d}">${d}</option>`).join("")}
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Título</label>
+                <input class="form-input" id="citem-titulo" placeholder="Ex: Frango + arroz">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Descrição</label>
+              <input class="form-input" id="citem-desc" placeholder="Ex: 120g frango, 100g arroz, legumes...">
+            </div>
+
+            <div class="flex gap-2">
+              <button class="btn btn-primary btn-block" type="submit" id="citem-submit">Salvar</button>
+              <button class="btn btn-secondary btn-block" type="button" id="citem-reset">Limpar</button>
+            </div>
+          </form>
+
+          <div style="margin-top:1rem;">
+            ${
+              selectedId
+                ? (itensDoCardapio.length
+                    ? `
+                      <table class="table">
+                        <thead>
+                          <tr>
+                            <th>Dia</th>
+                            <th>Título</th>
+                            <th>Descrição</th>
+                            <th>Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${itensRows}
+                        </tbody>
+                      </table>
+                    `
+                    : `<div style="opacity:.7;">Nenhum item ainda. Cadastre os dias 1..7.</div>`)
+                : `<div style="opacity:.7;">Cadastre um cardápio primeiro.</div>`
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+
 async function upsertIngrediente(payload) {
   // payload: { id?, nome, unidade, quantidade, quantidade_minima }
 
@@ -1517,6 +1760,78 @@ if (kopReset) {
   });
 }
 
+  // ===============================
+// CARDÁPIOS (EVENTS)
+// ===============================
+const carForm = document.getElementById("car-form");
+if (carForm) {
+  carForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const id = document.getElementById("car-id")?.value?.trim() || null;
+    const nome = document.getElementById("car-nome")?.value?.trim();
+    const tipo = document.getElementById("car-tipo")?.value || "padrao";
+    const ativo = !!document.getElementById("car-ativo")?.checked;
+
+    if (!nome) return alert("Informe o nome do cardápio.");
+
+    try {
+      await upsertCardapio({ id, nome, tipo, ativo });
+      await loadCardapios();
+      await loadCardapioItens();
+      resetCardapioForm();
+      if (!app.currentCardapioId && app.data.cardapios.length) app.currentCardapioId = app.data.cardapios[0].id;
+      renderApp();
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao salvar cardápio: " + (err?.message || err));
+    }
+  });
+}
+
+const carReset = document.getElementById("car-reset");
+if (carReset) carReset.addEventListener("click", () => resetCardapioForm());
+
+const carSelect = document.getElementById("car-select");
+if (carSelect) {
+  carSelect.addEventListener("change", () => {
+    app.currentCardapioId = carSelect.value || null;
+    resetCardapioItemForm();
+    renderApp();
+  });
+}
+
+// ITENS DO CARDÁPIO (1..7)
+const citemForm = document.getElementById("citem-form");
+if (citemForm) {
+  citemForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const id = document.getElementById("citem-id")?.value?.trim() || null;
+    const cardapio_id = document.getElementById("car-select")?.value || app.currentCardapioId;
+    const dia_semana = Number(document.getElementById("citem-dia")?.value || 0);
+    const titulo = document.getElementById("citem-titulo")?.value?.trim();
+    const descricao = document.getElementById("citem-desc")?.value?.trim() || "";
+
+    if (!cardapio_id) return alert("Selecione um cardápio.");
+    if (!dia_semana || dia_semana < 1 || dia_semana > 7) return alert("Dia deve ser de 1 a 7.");
+    if (!titulo) return alert("Informe o título.");
+
+    try {
+      await upsertCardapioItem({ id, cardapio_id, dia_semana, titulo, descricao });
+      await loadCardapioItens();
+      resetCardapioItemForm();
+      renderApp();
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao salvar item: " + (err?.message || err));
+    }
+  });
+}
+
+const citemReset = document.getElementById("citem-reset");
+if (citemReset) citemReset.addEventListener("click", () => resetCardapioItemForm());
+
 
   // AÇÕES NAS TABELAS (delegação)
    root.querySelectorAll("button[data-act]").forEach((btn) => {
@@ -1567,6 +1882,26 @@ if (act === "kop-del") {
   if (!confirm("Excluir opção do kit?")) return;
   await sb.from("kit_opcoes").delete().eq("id", String(id));
   await loadKitOpcoes();
+  renderApp();
+  return;
+}
+
+        if (act === "car-edit") return fillCardapioForm(id);
+if (act === "car-del") {
+  if (!confirm("Excluir cardápio? (vai apagar os 7 itens junto)")) return;
+  await deleteCardapioDB(id);
+  await loadCardapios();
+  await loadCardapioItens();
+  app.currentCardapioId = app.data.cardapios.length ? app.data.cardapios[0].id : null;
+  renderApp();
+  return;
+}
+
+if (act === "citem-edit") return fillCardapioItemForm(id);
+if (act === "citem-del") {
+  if (!confirm("Excluir item do cardápio?")) return;
+  await deleteCardapioItemDB(id);
+  await loadCardapioItens();
   renderApp();
   return;
 }
@@ -1696,6 +2031,70 @@ function resetEstoqueForm() {
   if (title) title.textContent = "Novo Item";
   if (submit) submit.textContent = "Salvar";
 }
+
+function resetCardapioForm() {
+  const id = document.getElementById("car-id");
+  const nome = document.getElementById("car-nome");
+  const tipo = document.getElementById("car-tipo");
+  const ativo = document.getElementById("car-ativo");
+  const title = document.getElementById("car-title");
+  const submit = document.getElementById("car-submit");
+
+  if (id) id.value = "";
+  if (nome) nome.value = "";
+  if (tipo) tipo.value = "padrao";
+  if (ativo) ativo.checked = true;
+  if (title) title.textContent = "Novo Cardápio";
+  if (submit) submit.textContent = "Salvar";
+}
+
+function fillCardapioForm(id) {
+  const c = (app.data.cardapios || []).find((x) => String(x.id) === String(id));
+  if (!c) return;
+
+  document.getElementById("car-id").value = c.id;
+  document.getElementById("car-nome").value = c.nome || "";
+  document.getElementById("car-tipo").value = c.tipo || "padrao";
+  document.getElementById("car-ativo").checked = !!c.ativo;
+
+  const title = document.getElementById("car-title");
+  const submit = document.getElementById("car-submit");
+  if (title) title.textContent = "Editar Cardápio";
+  if (submit) submit.textContent = "Atualizar";
+}
+
+function resetCardapioItemForm() {
+  const id = document.getElementById("citem-id");
+  const dia = document.getElementById("citem-dia");
+  const titulo = document.getElementById("citem-titulo");
+  const desc = document.getElementById("citem-desc");
+  const submit = document.getElementById("citem-submit");
+
+  if (id) id.value = "";
+  if (dia) dia.value = "1";
+  if (titulo) titulo.value = "";
+  if (desc) desc.value = "";
+  if (submit) submit.textContent = "Salvar";
+}
+
+function fillCardapioItemForm(id) {
+  const i = (app.data.cardapio_itens || []).find((x) => String(x.id) === String(id));
+  if (!i) return;
+
+  // garante cardápio selecionado
+  app.currentCardapioId = i.cardapio_id;
+  const sel = document.getElementById("car-select");
+  if (sel) sel.value = i.cardapio_id;
+
+  document.getElementById("citem-id").value = i.id;
+  document.getElementById("citem-dia").value = String(i.dia_semana || 1);
+  document.getElementById("citem-titulo").value = i.titulo || "";
+  document.getElementById("citem-desc").value = i.descricao || "";
+
+  const submit = document.getElementById("citem-submit");
+  if (submit) submit.textContent = "Atualizar";
+}
+
 
 function resetKitForm() {
   const id = document.getElementById("kit-id");
