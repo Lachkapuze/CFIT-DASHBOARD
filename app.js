@@ -82,18 +82,28 @@ function formatCurrency(value) {
 }
 
 function toISODateInputValue(dateObj) {
+  if (!dateObj) return "";
+
   const d = new Date(dateObj);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
+
+  // corrige o offset de fuso horário
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+
+  const yyyy = local.getFullYear();
+  const mm = String(local.getMonth() + 1).padStart(2, "0");
+  const dd = String(local.getDate()).padStart(2, "0");
+
   return `${yyyy}-${mm}-${dd}`;
 }
 
+
 function startOfMonthISO() {
   const now = new Date();
-  const d = new Date(now.getFullYear(), now.getMonth(), 1);
-  return toISODateInputValue(d);
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  return `${yyyy}-${mm}-01`;
 }
+
 
 function todayISO() {
   return new Date().toLocaleDateString("en-CA");
@@ -2051,7 +2061,8 @@ function fillPedidoForm(id) {
   document.getElementById("ped-id").value = p.id;
   document.getElementById("ped-cliente").value = p.cliente_id || "";
   document.getElementById("ped-valor").value = p.valor || "";
-  document.getElementById("ped-data").value = p.data ? toISODateInputValue(p.data) : todayISO();
+  document.getElementById("ped-data").value =
+  p.data ? String(p.data).slice(0, 10) : todayISO();
   document.getElementById("ped-status").value = p.status || "Recebido";
   document.getElementById("ped-title").textContent = "Editar Pedido";
   document.getElementById("ped-submit").textContent = "Atualizar";
@@ -2081,7 +2092,8 @@ function fillDespesaForm(id) {
   document.getElementById("desp-id").value = d.id;
   document.getElementById("desp-desc").value = d.descricao || "";
   document.getElementById("desp-valor").value = d.valor || "";
-  document.getElementById("desp-data").value = d.data ? toISODateInputValue(d.data) : todayISO();
+  document.getElementById("desp-data").value =
+  d.data ? String(d.data).slice(0, 10) : todayISO();
   document.getElementById("desp-title").textContent = "Editar Despesa";
   document.getElementById("desp-submit").textContent = "Atualizar";
 }
