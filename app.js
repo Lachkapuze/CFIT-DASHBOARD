@@ -48,6 +48,7 @@ const app = {
     pedidos: [],
     despesas: [],
     ingredientes: [],
+    kits: [],
     compras_insumos: [], // opcional (se existir no banco)
   },
   filtro: {
@@ -223,12 +224,20 @@ async function loadComprasInsumosIfExists() {
   app.data.compras_insumos = (data || []).sort(sortByCreatedAtOrIdDesc);
 }
 
+async function loadKits() {
+  const { data, error } = await sb.from("kits").select("*");
+  if (error) throw error;
+  app.data.kits = (data || []).sort(sortByCreatedAtOrIdDesc);
+}
+
+
 async function loadAllData() {
   await Promise.all([
     loadClientes(),
     loadPedidos(),
     loadDespesas(),
     loadIngredientes(),
+    loadKits(),
     loadComprasInsumosIfExists(),
   ]);
 }
@@ -275,13 +284,15 @@ function renderApp() {
 }
 
 function renderSidebar() {
-  const items = [
-    { key: "dashboard", icon: "📊", label: "Dashboard" },
-    { key: "clientes", icon: "👥", label: "Clientes" },
-    { key: "pedidos", icon: "🛒", label: "Pedidos" },
-    { key: "despesas", icon: "📉", label: "Despesas" },
-    { key: "estoque", icon: "📦", label: "Estoque" },
-  ];
+ const items = [
+  { key: "dashboard", icon: "📊", label: "Dashboard" },
+  { key: "clientes", icon: "👥", label: "Clientes" },
+  { key: "pedidos", icon: "🛒", label: "Pedidos" },
+  { key: "despesas", icon: "📉", label: "Despesas" },
+  { key: "estoque", icon: "📦", label: "Estoque" },
+  { key: "kits", icon: "📦", label: "Kits" }, // ADICIONADO
+];
+
 
   return `
     <div class="sidebar">
@@ -329,10 +340,13 @@ function renderCurrentPage() {
       return renderDespesas();
     case "estoque":
       return renderEstoque();
+    case "kits":  // ADICIONADO
+      return renderKits(); // Renderiza a tela de Kits
     default:
       return renderDashboard();
   }
 }
+
 
 // ===============================
 // 9) NAV
@@ -717,6 +731,91 @@ function renderPedidos() {
   `;
 }
 
+function renderKits() {
+  const kitsOptions = app.data.kits
+    .map((k) => `<option value="${k.id}">${escapeHtml(k.nome)}</option>`)
+    .join("");
+
+  return `
+    <h2>Kits</h2>
+
+    <div class="grid grid-2" style="margin-top:1.25rem;">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title" id="kit-title">Novo Kit</h3>
+        </div>
+        <div class="card-content">
+          <form id="kit-form">
+            <input type="hidden" id="kit-id" />
+
+            <div class="form-group">
+              <label class="form-label">Nome do Kit</label>
+              <input class="form-input" id="kit-nome" placeholder="Ex: Kit 7 Marmitas">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Quantidade</label>
+              <input class="form-input" id="kit-quantidade" type="number" step="1" placeholder="Ex: 7">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Ativo</label>
+              <input class="form-input" id="kit-ativo" type="checkbox" checked>
+            </div>
+
+            <div class="flex gap-2">
+              <button class="btn btn-primary btn-block" type="submit" id="kit-submit">Salvar</button>
+              <button class="btn btn-secondary btn-block" type="button" id="kit-reset">Limpar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Lista de Kits</h3>
+        </div>
+        <div class="card-content">
+          ${
+            app.data.kits.length
+              ? `
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Quantidade</th>
+                      <th>Ativo</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${app.data.kits
+                      .map((k) => {
+                        return `
+                          <tr>
+                            <td>${escapeHtml(k.nome)}</td>
+                            <td>${escapeHtml(k.quantidade)}</td>
+                            <td>${k.ativo ? "✅" : "❌"}</td>
+                            <td style="white-space:nowrap;">
+                              <button class="btn btn-small btn-secondary" data-act="kit-edit" data-id="${k.id}">Editar</button>
+                              <button class="btn btn-small btn-danger" data-act="kit-del" data-id="${k.id}">Excluir</button>
+                            </td>
+                          </tr>
+                        `;
+                      })
+                      .join("")}
+                  </tbody>
+                </table>
+              `
+              : `<div style="opacity:.7;">Nenhum kit cadastrado.</div>`
+          }
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+
 // ===============================
 // PEDIDOS - UI: KITS + OPÇÕES (ROBUSTO)
 // ===============================
@@ -915,6 +1014,49 @@ async function deleteDespesaDB(id) {
   if (error) throw error;
 }
 
+// Função para inserir ou atualizar KIT
+async function upsertKit(payload) {
+  const dataToSave = {
+    nome: payload.nome,
+    quantidade: payload.quantidade,
+    ativo: payload.ativo ?? true,
+  };
+
+  let query = sb.from("kits");
+
+  if (payload.id) {
+    // UPDATE
+    const { error } = await query.update(dataToSave).eq("id", payload.id);
+    if (error) throw error;
+  } else {
+    // INSERT
+    const { error } = await query.insert([dataToSave]);
+    if (error) throw error;
+  }
+}
+
+// Função para inserir ou atualizar OPÇÃO DO KIT
+async function upsertKitOpcao(payload) {
+  const dataToSave = {
+    kit_id: payload.kit_id,
+    titulo: payload.titulo,
+    descricao: payload.descricao,
+  };
+
+  let query = sb.from("kit_opcoes");
+
+  if (payload.id) {
+    // UPDATE
+    const { error } = await query.update(dataToSave).eq("id", payload.id);
+    if (error) throw error;
+  } else {
+    // INSERT
+    const { error } = await query.insert([dataToSave]);
+    if (error) throw error;
+  }
+}
+
+
 // ===============================
 // 14) ESTOQUE (CRUD)
 // ===============================
@@ -1054,6 +1196,36 @@ function bindPageEvents() {
       renderApp();
     });
   }
+
+  // KIT (navegação)
+const kitForm = document.getElementById("kit-form");
+if (kitForm) {
+  kitForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const id = document.getElementById("kit-id")?.value?.trim() || null;
+    const nome = document.getElementById("kit-nome")?.value?.trim();
+    const quantidade = Number(document.getElementById("kit-quantidade")?.value || 0);
+    const ativo = document.getElementById("kit-ativo")?.checked;
+
+    if (!nome) return alert("Informe o nome do Kit.");
+    if (!quantidade) return alert("Informe a quantidade do Kit.");
+
+    try {
+      await upsertKit({ id, nome, quantidade, ativo });
+      await loadKits(); // Carregar Kits novamente
+      resetKitForm();
+      renderApp();
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao salvar kit: " + (err?.message || err));
+    }
+  });
+}
+
+const kitReset = document.getElementById("kit-reset");
+if (kitReset) kitReset.addEventListener("click", () => resetKitForm());
+
 
   // CLIENTES
   const cliForm = document.getElementById("cli-form");
