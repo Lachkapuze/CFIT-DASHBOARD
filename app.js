@@ -1584,156 +1584,195 @@ function bindPageEvents() {
     });
   }
 
- // ===============================
-// KITS (FORM) - ÚNICO BLOCO
-// ===============================
-const kitForm = document.getElementById("kit-form");
-if (kitForm) {
-  kitForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  // ===============================
+  // KITS (FORM) - 1 BLOCO (evita "already declared")
+  // ===============================
+  const kitFormEl = document.getElementById("kit-form");
+  if (kitFormEl) {
+    kitFormEl.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-    const id = document.getElementById("kit-id")?.value?.trim() || null;
-    const nome = document.getElementById("kit-nome")?.value?.trim();
-    const quantidade = Number(document.getElementById("kit-quantidade")?.value || 0);
-    const ativo = !!document.getElementById("kit-ativo")?.checked;
+      const id = document.getElementById("kit-id")?.value?.trim() || null;
+      const nome = document.getElementById("kit-nome")?.value?.trim();
+      const quantidade = Number(document.getElementById("kit-quantidade")?.value || 0);
+      const ativo = !!document.getElementById("kit-ativo")?.checked;
 
-    if (!nome) return alert("Informe o nome do kit.");
-    if (!quantidade || quantidade <= 0) return alert("Informe uma quantidade válida.");
+      if (!nome) return alert("Informe o nome do kit.");
+      if (!quantidade || quantidade <= 0) return alert("Informe uma quantidade válida.");
 
-    try {
-      await upsertKit({ id, nome, quantidade, ativo });
-      await loadKits();
-      resetKitForm();
-      renderApp();
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao salvar kit: " + (err?.message || err));
-    }
-  });
-}
-
-const kitReset = document.getElementById("kit-reset");
-if (kitReset) kitReset.addEventListener("click", () => resetKitForm());
-
-
-  // CLIENTES
-  const cliForm = document.getElementById("cli-form");
-if (cliForm) {
-  cliForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const id = document.getElementById("cli-id")?.value?.trim() || null;
-    const nome = document.getElementById("cli-nome")?.value?.trim();
-    const telefone = document.getElementById("cli-tel")?.value?.trim();
-    const endereco = document.getElementById("cli-end")?.value?.trim();
-
-    if (!nome) return alert("Informe o nome.");
-    if (!telefone) return alert("Informe o telefone.");
-    if (!endereco) return alert("Informe o endereço.");
-
-    try {
-      await upsertCliente({ id, nome, telefone, endereco });
-      await loadClientes();
-      // pedidos usam cliente_nome -> histórico preservado
-      resetClienteForm();
-      renderApp();
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao salvar cliente: " + (err?.message || err));
-    }
-  });
-}
-
-const cliReset = document.getElementById("cli-reset");
-if (cliReset) cliReset.addEventListener("click", () => resetClienteForm());
-
-    // PEDIDOS
-// PEDIDOS
-const pedForm = document.getElementById("ped-form");
-if (pedForm) {
-  // botões 7/14/28 (1/2/4 pedidos)
-  const setMult = (n) => {
-    const multEl = document.getElementById("ped-mult");
-    if (multEl) multEl.value = String(n);
-  };
-
-  document.getElementById("ped-mult-1")?.addEventListener("click", () => setMult(1));
-  document.getElementById("ped-mult-2")?.addEventListener("click", () => setMult(2));
-  document.getElementById("ped-mult-4")?.addEventListener("click", () => setMult(4));
-
-  pedForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const id = document.getElementById("ped-id")?.value?.trim() || null;
-    const cliente_id = document.getElementById("ped-cliente")?.value || "";
-    const cardapio_id = document.getElementById("ped-cardapio")?.value || null;
-    const observacoes = document.getElementById("ped-obs")?.value?.trim() || null;
-
-    const valor = Number(document.getElementById("ped-valor")?.value || 0);
-    const data = document.getElementById("ped-data")?.value || todayISO();
-    const statusUI = document.getElementById("ped-status")?.value || "Recebido";
-
-    if (!cliente_id) return alert("Selecione o cliente.");
-    if (!cardapio_id) return alert("Selecione o cardápio.");
-    if (!valor || valor <= 0) return alert("Informe um valor válido.");
-
-    const statusMap = {
-      Recebido: "recebido",
-      Preparando: "preparando",
-      Pronto: "pronto",
-      Entregue: "entregue",
-      Cancelado: "cancelado",
-    };
-
-    const payloadBase = {
-      id,
-      cliente_id,
-      cardapio_id,
-      observacoes,
-      valor,
-      data,
-      status: statusMap[statusUI] || "recebido",
-    };
-
-    try {
-      if (id) {
-        await upsertPedido(payloadBase);
-      } else {
-        const mult = Number(document.getElementById("ped-mult")?.value || 1) || 1;
-
-        const inserts = Array.from({ length: mult }, () => ({
-          cliente_id: payloadBase.cliente_id,
-          cardapio_id: payloadBase.cardapio_id,
-          observacoes: payloadBase.observacoes,
-          valor: payloadBase.valor,
-          valor_total: payloadBase.valor,
-          data: payloadBase.data,
-          status: payloadBase.status,
-        }));
-
-        const { error } = await sb.from("pedidos").insert(inserts);
-        if (error) throw error;
+      try {
+        await upsertKit({ id, nome, quantidade, ativo });
+        if (typeof loadKits === "function") await loadKits();
+        if (typeof resetKitForm === "function") resetKitForm();
+        renderApp();
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao salvar kit: " + (err?.message || err));
       }
+    });
+  }
 
-      await loadPedidos();
-      resetPedidoForm();
-      renderApp();
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao salvar pedido: " + (err?.message || err));
-    }
-  });
-}
+  const kitResetEl = document.getElementById("kit-reset");
+  if (kitResetEl) kitResetEl.addEventListener("click", () => (typeof resetKitForm === "function" ? resetKitForm() : null));
 
+  // ===============================
+  // OPÇÕES DO KIT (FORM)
+  // ===============================
+  const kopFormEl = document.getElementById("kop-form");
+  if (kopFormEl) {
+    kopFormEl.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
+      const id = document.getElementById("kop-id")?.value?.trim() || null;
+      const kit_id = document.getElementById("kop-kit")?.value?.trim() || "";
+      const titulo = document.getElementById("kop-titulo")?.value?.trim();
+      const descricao = document.getElementById("kop-desc")?.value?.trim() || "";
 
+      if (!kit_id) return alert("Selecione um kit.");
+      if (!titulo) return alert("Informe o título.");
+
+      try {
+        await upsertKitOpcao({ id, kit_id, titulo, descricao });
+        if (typeof loadKitOpcoes === "function") await loadKitOpcoes();
+        renderApp();
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao salvar opção do kit: " + (err?.message || err));
+      }
+    });
+  }
+
+  const kopResetEl = document.getElementById("kop-reset");
+  if (kopResetEl) {
+    kopResetEl.addEventListener("click", () => {
+      const id = document.getElementById("kop-id");
+      const kit = document.getElementById("kop-kit");
+      const titulo = document.getElementById("kop-titulo");
+      const desc = document.getElementById("kop-desc");
+      if (id) id.value = "";
+      if (kit) kit.value = "";
+      if (titulo) titulo.value = "";
+      if (desc) desc.value = "";
+    });
+  }
+
+  // ===============================
+  // CLIENTES
+  // ===============================
+  const cliForm = document.getElementById("cli-form");
+  if (cliForm) {
+    cliForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const id = document.getElementById("cli-id")?.value?.trim() || null;
+      const nome = document.getElementById("cli-nome")?.value?.trim();
+      const telefone = document.getElementById("cli-tel")?.value?.trim();
+      const endereco = document.getElementById("cli-end")?.value?.trim();
+
+      if (!nome) return alert("Informe o nome.");
+      if (!telefone) return alert("Informe o telefone.");
+      if (!endereco) return alert("Informe o endereço.");
+
+      try {
+        await upsertCliente({ id, nome, telefone, endereco });
+        await loadClientes();
+        resetClienteForm();
+        renderApp();
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao salvar cliente: " + (err?.message || err));
+      }
+    });
+  }
+
+  const cliReset = document.getElementById("cli-reset");
+  if (cliReset) cliReset.addEventListener("click", () => resetClienteForm());
+
+  // ===============================
+  // PEDIDOS
+  // ===============================
+  const pedForm = document.getElementById("ped-form");
+  if (pedForm) {
+    // botões 7/14/28 (1/2/4 pedidos)
+    const setMult = (n) => {
+      const multEl = document.getElementById("ped-mult");
+      if (multEl) multEl.value = String(n);
+    };
+
+    document.getElementById("ped-mult-1")?.addEventListener("click", () => setMult(1));
+    document.getElementById("ped-mult-2")?.addEventListener("click", () => setMult(2));
+    document.getElementById("ped-mult-4")?.addEventListener("click", () => setMult(4));
+
+    pedForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const id = document.getElementById("ped-id")?.value?.trim() || null;
+      const cliente_id = document.getElementById("ped-cliente")?.value || "";
+      const cardapio_id = document.getElementById("ped-cardapio")?.value || null;
+      const observacoes = document.getElementById("ped-obs")?.value?.trim() || null;
+
+      const valor = Number(document.getElementById("ped-valor")?.value || 0);
+      const data = document.getElementById("ped-data")?.value || todayISO();
+      const statusUI = document.getElementById("ped-status")?.value || "Recebido";
+
+      if (!cliente_id) return alert("Selecione o cliente.");
+      if (!cardapio_id) return alert("Selecione o cardápio.");
+      if (!valor || valor <= 0) return alert("Informe um valor válido.");
+
+      const statusMap = {
+        Recebido: "recebido",
+        Preparando: "preparando",
+        Pronto: "pronto",
+        Entregue: "entregue",
+        Cancelado: "cancelado",
+      };
+
+      const payloadBase = {
+        id,
+        cliente_id,
+        cardapio_id,
+        observacoes,
+        valor,
+        data,
+        status: statusMap[statusUI] || "recebido",
+      };
+
+      try {
+        if (id) {
+          await upsertPedido(payloadBase);
+        } else {
+          const mult = Number(document.getElementById("ped-mult")?.value || 1) || 1;
+
+          const inserts = Array.from({ length: mult }, () => ({
+            cliente_id: payloadBase.cliente_id,
+            cardapio_id: payloadBase.cardapio_id,
+            observacoes: payloadBase.observacoes,
+            valor: payloadBase.valor,
+            valor_total: payloadBase.valor,
+            data: payloadBase.data,
+            status: payloadBase.status,
+          }));
+
+          const { error } = await sb.from("pedidos").insert(inserts);
+          if (error) throw error;
+        }
+
+        await loadPedidos();
+        resetPedidoForm();
+        renderApp();
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao salvar pedido: " + (err?.message || err));
+      }
+    });
+  }
 
   const pedReset = document.getElementById("ped-reset");
   if (pedReset) pedReset.addEventListener("click", () => resetPedidoForm());
 
-
-
+  // ===============================
   // DESPESAS
+  // ===============================
   const despForm = document.getElementById("desp-form");
   if (despForm) {
     despForm.addEventListener("submit", async (e) => {
@@ -1764,159 +1803,118 @@ if (pedForm) {
   const despReset = document.getElementById("desp-reset");
   if (despReset) despReset.addEventListener("click", () => resetDespesaForm());
 
+  // ===============================
   // ESTOQUE
+  // ===============================
   const estForm = document.getElementById("est-form");
-if (estForm) {
-  estForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  if (estForm) {
+    estForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-    const id = document.getElementById("est-id")?.value?.trim() || null;
-    const nome = document.getElementById("est-nome")?.value?.trim();
-    const unidade = document.getElementById("est-uni")?.value?.trim();
+      const id = document.getElementById("est-id")?.value?.trim() || null;
+      const nome = document.getElementById("est-nome")?.value?.trim();
+      const unidade = document.getElementById("est-uni")?.value?.trim();
 
-    const quantidade = Number(document.getElementById("est-qtd")?.value || 0);
-    const quantidade_minima = Number(document.getElementById("est-min")?.value || 0);
+      const quantidade = Number(document.getElementById("est-qtd")?.value || 0);
+      const quantidade_minima = Number(document.getElementById("est-min")?.value || 0);
 
-    if (!nome) return alert("Informe o nome.");
-    if (!unidade) return alert("Informe a unidade.");
+      if (!nome) return alert("Informe o nome.");
+      if (!unidade) return alert("Informe a unidade.");
 
-    try {
-      await upsertIngrediente({ id, nome, unidade, quantidade, quantidade_minima });
-      await loadIngredientes();
-      resetEstoqueForm();
-      renderApp();
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao salvar estoque: " + (err?.message || err));
-    }
-  });
-}
+      try {
+        await upsertIngrediente({ id, nome, unidade, quantidade, quantidade_minima });
+        await loadIngredientes();
+        resetEstoqueForm();
+        renderApp();
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao salvar estoque: " + (err?.message || err));
+      }
+    });
+  }
 
-const estReset = document.getElementById("est-reset");
-if (estReset) estReset.addEventListener("click", () => resetEstoqueForm());
-
-
-
-// ===============================
-// OPÇÕES DO KIT (FORM)
-// ===============================
-const kopForm = document.getElementById("kop-form");
-if (kopForm) {
-  kopForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const id = document.getElementById("kop-id")?.value?.trim() || null;
-    const kit_id = document.getElementById("kop-kit")?.value?.trim() || "";
-    const titulo = document.getElementById("kop-titulo")?.value?.trim();
-    const descricao = document.getElementById("kop-desc")?.value?.trim() || "";
-
-    if (!kit_id) return alert("Selecione um kit.");
-    if (!titulo) return alert("Informe o título da opção.");
-
-    try {
-      await upsertKitOpcao({ id, kit_id, titulo, descricao });
-      await loadKitOpcoes();
-      renderApp();
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao salvar opção do kit: " + (err?.message || err));
-    }
-  });
-}
-
-const kopReset = document.getElementById("kop-reset");
-if (kopReset) {
-  kopReset.addEventListener("click", () => {
-    const id = document.getElementById("kop-id");
-    const kit = document.getElementById("kop-kit");
-    const titulo = document.getElementById("kop-titulo");
-    const desc = document.getElementById("kop-desc");
-    if (id) id.value = "";
-    if (kit) kit.value = "";
-    if (titulo) titulo.value = "";
-    if (desc) desc.value = "";
-  });
-}
+  const estReset = document.getElementById("est-reset");
+  if (estReset) estReset.addEventListener("click", () => resetEstoqueForm());
 
   // ===============================
-// CARDÁPIOS (EVENTS)
-// ===============================
-const carForm = document.getElementById("car-form");
-if (carForm) {
-  carForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  // CARDÁPIOS
+  // ===============================
+  const carForm = document.getElementById("car-form");
+  if (carForm) {
+    carForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-    const id = document.getElementById("car-id")?.value?.trim() || null;
-    const nome = document.getElementById("car-nome")?.value?.trim();
-    const tipo = document.getElementById("car-tipo")?.value || "padrao";
-    const ativo = !!document.getElementById("car-ativo")?.checked;
+      const id = document.getElementById("car-id")?.value?.trim() || null;
+      const nome = document.getElementById("car-nome")?.value?.trim();
+      const tipo = document.getElementById("car-tipo")?.value || "padrao";
+      const ativo = !!document.getElementById("car-ativo")?.checked;
 
-    if (!nome) return alert("Informe o nome do cardápio.");
+      if (!nome) return alert("Informe o nome do cardápio.");
 
-    try {
-      await upsertCardapio({ id, nome, tipo, ativo });
-      await loadCardapios();
-      await loadCardapioItens();
-      resetCardapioForm();
-      if (!app.currentCardapioId && app.data.cardapios.length) app.currentCardapioId = app.data.cardapios[0].id;
-      renderApp();
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao salvar cardápio: " + (err?.message || err));
-    }
-  });
-}
+      try {
+        await upsertCardapio({ id, nome, tipo, ativo });
+        await loadCardapios();
+        await loadCardapioItens();
+        resetCardapioForm();
+        if (!app.currentCardapioId && app.data.cardapios?.length) app.currentCardapioId = app.data.cardapios[0].id;
+        renderApp();
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao salvar cardápio: " + (err?.message || err));
+      }
+    });
+  }
 
-const carReset = document.getElementById("car-reset");
-if (carReset) carReset.addEventListener("click", () => resetCardapioForm());
+  const carReset = document.getElementById("car-reset");
+  if (carReset) carReset.addEventListener("click", () => resetCardapioForm());
 
-const carSelect = document.getElementById("car-select");
-if (carSelect) {
-  carSelect.addEventListener("change", () => {
-    app.currentCardapioId = carSelect.value || null;
-    resetCardapioItemForm();
-    renderApp();
-  });
-}
-
-// ITENS DO CARDÁPIO (1..7)
-const citemForm = document.getElementById("citem-form");
-if (citemForm) {
-  citemForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const id = document.getElementById("citem-id")?.value?.trim() || null;
-    const cardapio_id = document.getElementById("car-select")?.value || app.currentCardapioId;
-    const dia_semana = Number(document.getElementById("citem-dia")?.value || 0);
-    const titulo = document.getElementById("citem-titulo")?.value?.trim();
-    const descricao = document.getElementById("citem-desc")?.value?.trim() || "";
-
-    if (!cardapio_id) return alert("Selecione um cardápio.");
-    if (!dia_semana || dia_semana < 1 || dia_semana > 7) return alert("Dia deve ser de 1 a 7.");
-    if (!titulo) return alert("Informe o título.");
-
-    try {
-      await upsertCardapioItem({ id, cardapio_id, dia_semana, titulo, descricao });
-      await loadCardapioItens();
+  const carSelect = document.getElementById("car-select");
+  if (carSelect) {
+    carSelect.addEventListener("change", () => {
+      app.currentCardapioId = carSelect.value || null;
       resetCardapioItemForm();
       renderApp();
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao salvar item: " + (err?.message || err));
-    }
-  });
-}
+    });
+  }
 
-const citemReset = document.getElementById("citem-reset");
-if (citemReset) citemReset.addEventListener("click", () => resetCardapioItemForm());
+  // ITENS DO CARDÁPIO (1..7)
+  const citemForm = document.getElementById("citem-form");
+  if (citemForm) {
+    citemForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
+      const id = document.getElementById("citem-id")?.value?.trim() || null;
+      const cardapio_id = document.getElementById("car-select")?.value || app.currentCardapioId;
+      const dia_semana = Number(document.getElementById("citem-dia")?.value || 0);
+      const titulo = document.getElementById("citem-titulo")?.value?.trim();
+      const descricao = document.getElementById("citem-desc")?.value?.trim() || "";
 
+      if (!cardapio_id) return alert("Selecione um cardápio.");
+      if (!dia_semana || dia_semana < 1 || dia_semana > 7) return alert("Dia deve ser de 1 a 7.");
+      if (!titulo) return alert("Informe o título.");
+
+      try {
+        await upsertCardapioItem({ id, cardapio_id, dia_semana, titulo, descricao });
+        await loadCardapioItens();
+        resetCardapioItemForm();
+        renderApp();
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao salvar item: " + (err?.message || err));
+      }
+    });
+  }
+
+  const citemReset = document.getElementById("citem-reset");
+  if (citemReset) citemReset.addEventListener("click", () => resetCardapioItemForm());
+
+  // ===============================
   // AÇÕES NAS TABELAS (delegação)
-   root.querySelectorAll("button[data-act]").forEach((btn) => {
+  // ===============================
+  root.querySelectorAll("button[data-act]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const act = btn.dataset.act;
 
-      // ✅ NÃO converte tudo para Number (UUID vira NaN)
       const rawId = (btn.dataset.id ?? "").trim();
       const id = rawId && /^\d+$/.test(rawId) ? Number(rawId) : rawId;
 
@@ -1948,42 +1946,45 @@ if (citemReset) citemReset.addEventListener("click", () => resetCardapioItemForm
           return;
         }
 
+        if (act === "kit-edit") {
+          if (typeof fillKitForm === "function") return fillKitForm(id);
+          return;
+        }
         if (act === "kit-del") {
-  if (!confirm("Excluir kit?")) return;
-  await sb.from("kits").delete().eq("id", String(id));
-  await loadKits();
-  renderApp();
-  return;
-}
+          if (!confirm("Excluir kit?")) return;
+          await sb.from("kits").delete().eq("id", String(id));
+          if (typeof loadKits === "function") await loadKits();
+          renderApp();
+          return;
+        }
 
-if (act === "kop-del") {
-  if (!confirm("Excluir opção do kit?")) return;
-  await sb.from("kit_opcoes").delete().eq("id", String(id));
-  await loadKitOpcoes();
-  renderApp();
-  return;
-}
+        if (act === "kop-del") {
+          if (!confirm("Excluir opção do kit?")) return;
+          await sb.from("kit_opcoes").delete().eq("id", String(id));
+          if (typeof loadKitOpcoes === "function") await loadKitOpcoes();
+          renderApp();
+          return;
+        }
 
         if (act === "car-edit") return fillCardapioForm(id);
-if (act === "car-del") {
-  if (!confirm("Excluir cardápio? (vai apagar os 7 itens junto)")) return;
-  await deleteCardapioDB(id);
-  await loadCardapios();
-  await loadCardapioItens();
-  app.currentCardapioId = app.data.cardapios.length ? app.data.cardapios[0].id : null;
-  renderApp();
-  return;
-}
+        if (act === "car-del") {
+          if (!confirm("Excluir cardápio? (vai apagar os 7 itens junto)")) return;
+          await deleteCardapioDB(id);
+          await loadCardapios();
+          await loadCardapioItens();
+          app.currentCardapioId = app.data.cardapios?.length ? app.data.cardapios[0].id : null;
+          renderApp();
+          return;
+        }
 
-if (act === "citem-edit") return fillCardapioItemForm(id);
-if (act === "citem-del") {
-  if (!confirm("Excluir item do cardápio?")) return;
-  await deleteCardapioItemDB(id);
-  await loadCardapioItens();
-  renderApp();
-  return;
-}
-
+        if (act === "citem-edit") return fillCardapioItemForm(id);
+        if (act === "citem-del") {
+          if (!confirm("Excluir item do cardápio?")) return;
+          await deleteCardapioItemDB(id);
+          await loadCardapioItens();
+          renderApp();
+          return;
+        }
 
         if (act === "est-edit") return fillEstoqueForm(id);
         if (act === "est-del") {
@@ -2000,6 +2001,7 @@ if (act === "citem-del") {
     });
   });
 }
+
 
 // ===============================
 // 16) FORM HELPERS (RESET + FILL)
