@@ -645,6 +645,11 @@ function renderPedidos() {
     .map((c) => `<option value="${c.id}">${escapeHtml(c.nome)}</option>`)
     .join("");
 
+  const cardapiosOptions = (app.data.cardapios || [])
+    .filter(c => c.ativo)
+    .map(c => `<option value="${c.id}">${escapeHtml(c.nome)}</option>`)
+    .join("");
+
   return `
     <h2>Pedidos</h2>
 
@@ -665,28 +670,34 @@ function renderPedidos() {
               </select>
             </div>
 
+            <!-- ✅ CARDÁPIO -->
             <div class="form-group">
-              <label class="form-label">Kit</label>
-              <select class="form-input" id="ped-kit">
-                <option value="">Carregando...</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Opção do Kit</label>
-              <select class="form-input" id="ped-kit-opcao">
-                <option value="">Selecione um kit primeiro</option>
+              <label class="form-label">Cardápio (7 marmitas)</label>
+              <select class="form-input" id="ped-cardapio">
+                <option value="">Selecione o cardápio</option>
+                ${cardapiosOptions}
               </select>
             </div>
 
             <div class="form-group">
               <label class="form-label">Valor (R$)</label>
-              <input class="form-input" id="ped-valor" type="number" step="0.01" placeholder="Ex: 105.00">
+              <input
+                class="form-input"
+                id="ped-valor"
+                type="number"
+                step="0.01"
+                placeholder="Ex: 105.00"
+              >
             </div>
 
             <div class="form-group">
               <label class="form-label">Data</label>
-              <input class="form-input" id="ped-data" type="date" value="${todayISO()}">
+              <input
+                class="form-input"
+                id="ped-data"
+                type="date"
+                value="${todayISO()}"
+              >
             </div>
 
             <div class="form-group">
@@ -701,8 +712,12 @@ function renderPedidos() {
             </div>
 
             <div class="flex gap-2">
-              <button class="btn btn-primary btn-block" type="submit" id="ped-submit">Salvar</button>
-              <button class="btn btn-secondary btn-block" type="button" id="ped-reset">Limpar</button>
+              <button class="btn btn-primary btn-block" type="submit" id="ped-submit">
+                Salvar
+              </button>
+              <button class="btn btn-secondary btn-block" type="button" id="ped-reset">
+                Limpar
+              </button>
             </div>
           </form>
         </div>
@@ -739,8 +754,16 @@ function renderPedidos() {
                             <td>${formatCurrency(p.valor)}</td>
                             <td>${escapeHtml(p.status)}</td>
                             <td style="white-space:nowrap;">
-                              <button class="btn btn-small btn-secondary" data-act="ped-edit" data-id="${p.id}">Editar</button>
-                              <button class="btn btn-small btn-danger" data-act="ped-del" data-id="${p.id}">Excluir</button>
+                              <button
+                                class="btn btn-small btn-secondary"
+                                data-act="ped-edit"
+                                data-id="${p.id}"
+                              >Editar</button>
+                              <button
+                                class="btn btn-small btn-danger"
+                                data-act="ped-del"
+                                data-id="${p.id}"
+                              >Excluir</button>
                             </td>
                           </tr>
                         `;
