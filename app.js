@@ -353,25 +353,25 @@ function bindNav() {
 // ===============================
 function calcResumoPeriodo(ini, fim) {
   const range = parseDateRange(ini, fim);
-  if (!range) return { faturamento: 0, despesas: 0, lucro: 0, pedidosHoje: [] };
+  if (!range) return { faturamento: 0, despesas: 0, lucro: 0 };
 
-  // faturamento: pedidos no período (ignora cancelado)
   const faturamento = (app.data.pedidos || [])
-    .filter((p) => withinRange(p.data, range) && String(p.status || "").toLowerCase() !== "cancelado")
+    .filter(p => withinRange(p.data, range) && String(p.status || "").toLowerCase() !== "cancelado")
     .reduce((t, p) => t + Number(p.valor || 0), 0);
 
-  // despesas: despesas + compras_insumos (se existir) no período
   const despesasA = (app.data.despesas || [])
-    .filter((d) => withinRange(d.data, range))
+    .filter(d => withinRange(d.data, range))
     .reduce((t, d) => t + Number(d.valor || 0), 0);
 
   const despesasB = (app.data.compras_insumos || [])
-    .filter((c) => withinRange(c.data, range))
+    .filter(c => withinRange(c.data, range))
     .reduce((t, c) => t + Number(c.valor || c.valor_total || 0), 0);
 
   const despesas = despesasA + despesasB;
   const lucro = faturamento - despesas;
 
+  return { faturamento, despesas, lucro };
+}
 
 function renderDashboard() {
   const ini = app.filtro.dashboardIni || startOfMonthISO();
@@ -380,9 +380,9 @@ function renderDashboard() {
 
   const hojeISO = todayISO();
   const pedidosHoje = (app.data.pedidos || [])
-    .filter((p) => String(p.data || "").slice(0, 10) === hojeISO);
+    .filter(p => String(p.data || "").slice(0, 10) === hojeISO);
 
-
+  return `
     <h2>Dashboard</h2>
 
     <div class="card" style="margin-top:1.25rem;">
@@ -400,7 +400,7 @@ function renderDashboard() {
               <label class="form-label">Data final</label>
               <input type="date" class="form-input" id="dash-fim" value="${escapeHtml(fim)}">
             </div>
-            <div class="form-group" style="margin-top: 1.8rem;">
+            <div class="form-group" style="margin-top:1.8rem;">
               <button class="btn btn-primary btn-block" type="submit">Aplicar</button>
             </div>
           </div>
@@ -431,22 +431,7 @@ function renderDashboard() {
         <div class="card-content">
           ${
             pedidosHoje.length
-              ? `
-                <div style="font-weight:600; margin-bottom:.5rem;">
-                  ${pedidosHoje.length} pedido(s) hoje
-                </div>
-                <ul style="margin:0; padding-left:1rem;">
-                  ${pedidosHoje.map(p => `
-                    <li>
-                      ${escapeHtml(
-                        app.data.clientes.find(c => c.id === p.cliente_id)?.nome || ""
-                      )}
-                      — ${formatCurrency(p.valor_total ?? p.valor ?? 0)}
-                      — ${escapeHtml(p.status || "")}
-                    </li>
-                  `).join("")}
-                </ul>
-              `
+              ? `<strong>${pedidosHoje.length} pedido(s) hoje</strong>`
               : `<div style="opacity:.7;">Nenhum pedido hoje.</div>`
           }
         </div>
@@ -456,7 +441,7 @@ function renderDashboard() {
         <div class="card-header">
           <h3 class="card-title">Resumo rápido</h3>
         </div>
-        <div class="card-content" style="opacity:.85;">
+        <div class="card-content">
           <div>Clientes: <strong>${app.data.clientes.length}</strong></div>
           <div>Pedidos: <strong>${app.data.pedidos.length}</strong></div>
           <div>Despesas: <strong>${app.data.despesas.length}</strong></div>
@@ -466,6 +451,7 @@ function renderDashboard() {
     </div>
   `;
 }
+
 
 // ===============================
 // 11) CLIENTES (CRUD)
