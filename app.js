@@ -1625,53 +1625,50 @@ if (cliReset) cliReset.addEventListener("click", () => resetClienteForm());
 
     // PEDIDOS
   const pedForm = document.getElementById("ped-form");
+if (pedForm) {
+  pedForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-  if (pedForm) {
-    // 👉 PASSO 4: carregar Kits e Opções quando a tela abrir
-    hydratePedidoKitsUI();
+    const id = document.getElementById("ped-id")?.value?.trim() || null;
+    const cliente_id = document.getElementById("ped-cliente")?.value || "";
+    const cardapio_id = document.getElementById("ped-cardapio")?.value || null;
+    const valor = Number(document.getElementById("ped-valor")?.value || 0);
+    const data = document.getElementById("ped-data")?.value || todayISO();
+    const statusUI = document.getElementById("ped-status")?.value || "Recebido";
 
-    pedForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
+    if (!cliente_id) return alert("Selecione o cliente.");
+    if (!cardapio_id) return alert("Selecione o cardápio.");
+    if (!valor || valor <= 0) return alert("Informe um valor válido.");
 
-      const id = document.getElementById("ped-id").value.trim() || null;
-      const cliente_id = document.getElementById("ped-cliente").value.trim() || "";
-      const valor = Number(document.getElementById("ped-valor").value || 0);
-      const data = document.getElementById("ped-data").value || todayISO();
-      const statusUI = document.getElementById("ped-status").value || "Recebido";
+    const statusMap = {
+      Recebido: "recebido",
+      Preparando: "preparando",
+      Pronto: "pronto",
+      Entregue: "entregue",
+      Cancelado: "cancelado",
+    };
 
-      // ✅ NOVO: Kit e Opção do Kit
-      const kit_id = document.getElementById("ped-kit")?.value || null;
-      const kit_opcao_titulo = document.getElementById("ped-kit-opcao")?.value || null;
+    const payload = {
+      id,
+      cliente_id,
+      cardapio_id, // ✅ NOVO (7 marmitas implícito)
+      valor,
+      data,
+      status: statusMap[statusUI] || "recebido",
+    };
 
-      const statusMap = {
-        "Recebido": "recebido",
-        "Preparando": "preparando",
-        "Pronto": "pronto",
-        "Entregue": "entregue",
-        "Cancelado": "cancelado",
-      };
+    try {
+      await upsertPedido(payload);
+      await loadPedidos();
+      resetPedidoForm();
+      renderApp();
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao salvar pedido: " + (err?.message || err));
+    }
+  });
+}
 
-      const payload = {
-        id,
-        cliente_id,
-        valor,
-        data,
-        status: statusMap[statusUI] || "recebido",
-        kit_id,
-        kit_opcao_titulo,
-      };
-
-      try {
-        await upsertPedido(payload);
-        await loadPedidos();
-        resetPedidoForm();
-        renderApp();
-      } catch (err) {
-        console.error(err);
-        alert(err?.message || "Erro ao salvar pedido.");
-      }
-    });
-  }
 
   const pedReset = document.getElementById("ped-reset");
   if (pedReset) pedReset.addEventListener("click", () => resetPedidoForm());
