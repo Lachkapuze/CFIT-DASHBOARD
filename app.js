@@ -382,9 +382,8 @@ function renderDashboard() {
   const pedidosHoje = (app.data.pedidos || [])
     .filter((p) => String(p.data || "").slice(0, 10) === hojeISO);
 
-  return `
-  `;
-}
+  return
+
 
     <h2>Dashboard</h2>
 
