@@ -132,6 +132,26 @@ function toast(msg) {
   console.log(msg);
 }
 
+async function getMyRole() {
+  const { data: ses } = await sb.auth.getSession();
+  const uid = ses?.session?.user?.id;
+  if (!uid) return "admin";
+
+  const { data, error } = await sb
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", uid)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("Role não encontrado, usando admin:", error.message);
+    return "admin";
+  }
+
+  return data?.role || "admin";
+}
+
+
 // ===============================
 // 5) AUTH UI
 // ===============================
@@ -288,11 +308,23 @@ async function loadAllData() {
 // ===============================
 async function initAfterLogin() {
   try {
+    // pega role
+    app.role = await getMyRole();
+
+    // trava a cozinha em "pedidos"
+    if (app.role === "cozinha") app.currentPage = "pedidos";
+
     // filtro padrão
     if (!app.filtro.dashboardIni) app.filtro.dashboardIni = startOfMonthISO();
     if (!app.filtro.dashboardFim) app.filtro.dashboardFim = todayISO();
 
-    await loadAllData();
+    // carrega só o que cada role precisa
+    if (app.role === "cozinha") {
+      await Promise.all([loadPedidos(), loadClientes(), loadCardapios(), loadCardapioItens()]);
+    } else {
+      await loadAllData();
+    }
+
     renderApp();
   } catch (e) {
     console.error("Erro initAfterLogin:", e);
@@ -302,6 +334,7 @@ async function initAfterLogin() {
     );
   }
 }
+
 
 // ===============================
 // 8) RENDER BASE
@@ -324,14 +357,18 @@ function renderApp() {
 }
 
 function renderSidebar() {
- const items = [
-  { key: "dashboard", icon: "📊", label: "Dashboard" },
-  { key: "clientes", icon: "👥", label: "Clientes" },
-  { key: "pedidos", icon: "🛒", label: "Pedidos" },
-  { key: "cardapios", icon: "📋", label: "Cardápios" }, // 👈 NOVO
-  { key: "despesas", icon: "📉", label: "Despesas" },
-  { key: "estoque", icon: "📦", label: "Estoque" },
-];
+ const items =
+  app.role === "cozinha"
+    ? [{ key: "pedidos", icon: "🛒", label: "Pedidos" }]
+    : [
+        { key: "dashboard", icon: "📊", label: "Dashboard" },
+        { key: "clientes", icon: "👥", label: "Clientes" },
+        { key: "pedidos", icon: "🛒", label: "Pedidos" },
+        { key: "cardapios", icon: "📋", label: "Cardápios" },
+        { key: "despesas", icon: "📉", label: "Despesas" },
+        { key: "estoque", icon: "📦", label: "Estoque" },
+      ];
+
 
 
 
@@ -370,6 +407,9 @@ function renderHeader() {
 }
 
 function renderCurrentPage() {
+  if (app.role === "cozinha" && app.currentPage !== "pedidos") {
+  app.currentPage = "pedidos";
+}
   switch (app.currentPage) {
     case "dashboard":
       return renderDashboard();
