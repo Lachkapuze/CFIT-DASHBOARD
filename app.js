@@ -297,10 +297,11 @@ function renderSidebar() {
   { key: "dashboard", icon: "📊", label: "Dashboard" },
   { key: "clientes", icon: "👥", label: "Clientes" },
   { key: "pedidos", icon: "🛒", label: "Pedidos" },
+  { key: "cardapios", icon: "📋", label: "Cardápios" }, // 👈 NOVO
   { key: "despesas", icon: "📉", label: "Despesas" },
   { key: "estoque", icon: "📦", label: "Estoque" },
-  { key: "kits", icon: "📦", label: "Kits" }, // ADICIONADO
 ];
+
 
 
   return `
@@ -345,12 +346,12 @@ function renderCurrentPage() {
       return renderClientes();
     case "pedidos":
       return renderPedidos();
+    case "cardapios":
+      return renderCardapios(); // 👈 NOVO
     case "despesas":
       return renderDespesas();
     case "estoque":
       return renderEstoque();
-    case "kits":  // ADICIONADO
-      return renderKits(); // Renderiza a tela de Kits
     default:
       return renderDashboard();
   }
