@@ -127,6 +127,228 @@ function withinRange(isoString, range) {
   return d >= range.start && d <= range.end;
 }
 
+// ===============================
+// MODAL (Pedido Detalhes) - 1x
+// ===============================
+function ensureModalRoot() {
+  if (document.getElementById("modal-root")) return;
+
+  const el = document.createElement("div");
+  el.id = "modal-root";
+  document.body.appendChild(el);
+
+  // fecha com ESC
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeModal();
+  });
+}
+
+function openModal(html) {
+  ensureModalRoot();
+  const root = document.getElementById("modal-root");
+  if (!root) return;
+
+  root.innerHTML = `
+    <div class="cfit-modal-backdrop" data-modal-close="1">
+      <div class="cfit-modal" role="dialog" aria-modal="true">
+        <div class="cfit-modal-header">
+          <div class="cfit-modal-title">Detalhes do Pedido</div>
+          <button class="btn btn-secondary btn-small" data-modal-close="1">Fechar</button>
+        </div>
+        <div class="cfit-modal-body">
+          ${html}
+        </div>
+      </div>
+    </div>
+  `;
+
+  // fecha clicando fora ou no botão
+  root.querySelectorAll("[data-modal-close='1']").forEach((b) => {
+    b.addEventListener("click", (ev) => {
+      if (ev.target?.classList?.contains("cfit-modal-backdrop") || ev.target?.dataset?.modalClose) {
+        closeModal();
+      }
+    });
+  });
+}
+
+function closeModal() {
+  const root = document.getElementById("modal-root");
+  if (root) root.innerHTML = "";
+}
+
+// Estilos do modal (injeta 1x)
+(function injectModalCssOnce() {
+  if (document.getElementById("cfit-modal-css")) return;
+  const css = document.createElement("style");
+  css.id = "cfit-modal-css";
+  css.textContent = `
+    .cfit-modal-backdrop{
+      position:fixed; inset:0; background:rgba(0,0,0,.55);
+      display:flex; align-items:center; justify-content:center; padding:18px; z-index:9999;
+    }
+    .cfit-modal{
+      width:min(980px, 100%);
+      background:#fff;
+      border-radius:14px;
+      box-shadow:0 20px 60px rgba(0,0,0,.35);
+      overflow:hidden;
+    }
+    .cfit-modal-header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 16px; border-bottom:1px solid rgba(0,0,0,.08);
+    }
+    .cfit-modal-title{ font-weight:800; }
+    .cfit-modal-body{ padding:16px; max-height:78vh; overflow:auto; }
+    .cfit-chip{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:6px 10px; border-radius:999px;
+      background:rgba(0,0,0,.06); font-size:12px;
+    }
+    .cfit-grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    @media (max-width: 780px){ .cfit-grid-2{ grid-template-columns:1fr; } }
+    .cfit-muted{ opacity:.75; }
+    .cfit-hr{ height:1px; background:rgba(0,0,0,.08); margin:12px 0; }
+  `;
+  document.head.appendChild(css);
+})();
+
+function brDateFromISO(iso) {
+  const s = String(iso || "").slice(0, 10);
+  return s ? s.split("-").reverse().join("/") : "-";
+}
+
+function getClienteById(id) {
+  return (app.data.clientes || []).find((c) => String(c.id) === String(id)) || null;
+}
+
+function getCardapioById(id) {
+  return (app.data.cardapios || []).find((c) => String(c.id) === String(id)) || null;
+}
+
+function getCardapioItensByCardapioId(id) {
+  return (app.data.cardapio_itens || [])
+    .filter((i) => String(i.cardapio_id) === String(id))
+    .sort((a, b) => Number(a.dia_semana) - Number(b.dia_semana));
+}
+
+function renderPedidoDetailsHTML(p) {
+  const cliente = getClienteById(p.cliente_id);
+  const card = getCardapioById(p.cardapio_id);
+  const itens = getCardapioItensByCardapioId(p.cardapio_id);
+
+  const statusLabel = String(p.status || "recebido");
+  const dataLabel = brDateFromISO(p.data);
+  const valorLabel = formatCurrency(p.valor || p.valor_total || 0);
+
+  const clienteNome = cliente?.nome || p.cliente_nome || p.clienteNome || "—";
+  const clienteTel = cliente?.telefone || "—";
+  const clienteEnd = cliente?.endereco || "—";
+
+  const cardNome = card?.nome || "—";
+
+  const itensHtml = itens.length
+    ? `<ol style="margin:8px 0 0 18px;">
+        ${itens
+          .map(
+            (i) =>
+              `<li><strong>Dia ${escapeHtml(i.dia_semana)}:</strong> ${escapeHtml(i.titulo || "")}
+                 <span class="cfit-muted">${escapeHtml(i.descricao || "")}</span>
+               </li>`
+          )
+          .join("")}
+      </ol>`
+    : `<div class="cfit-muted" style="margin-top:6px;">(Sem itens cadastrados neste cardápio)</div>`;
+
+  const canChangeStatus = true; // admin e cozinha podem
+
+  return `
+    <div class="cfit-grid-2">
+      <div>
+        <div class="cfit-chip">📅 <strong>${escapeHtml(dataLabel)}</strong></div>
+        <div class="cfit-chip">🧾 Status: <strong>${escapeHtml(statusLabel)}</strong></div>
+        <div class="cfit-chip">💰 <strong>${escapeHtml(valorLabel)}</strong></div>
+        <div class="cfit-chip">🍱 Qtd: <strong>7 marmitas</strong></div>
+        <div class="cfit-hr"></div>
+
+        <h3 style="margin:0 0 8px;">Cliente</h3>
+        <div><strong>${escapeHtml(clienteNome)}</strong></div>
+        <div class="cfit-muted">Telefone: ${escapeHtml(clienteTel)}</div>
+        <div class="cfit-muted">Endereço: ${escapeHtml(clienteEnd)}</div>
+
+        ${
+          p.observacoes
+            ? `<div class="cfit-hr"></div>
+               <h3 style="margin:0 0 8px;">Observações</h3>
+               <div>${escapeHtml(p.observacoes)}</div>`
+            : ""
+        }
+      </div>
+
+      <div>
+        <h3 style="margin:0 0 8px;">Cardápio</h3>
+        <div><strong>${escapeHtml(cardNome)}</strong></div>
+        ${itensHtml}
+
+        ${
+          canChangeStatus
+            ? `<div class="cfit-hr"></div>
+               <h3 style="margin:0 0 8px;">Atualizar status</h3>
+               <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                 <button class="btn btn-secondary" data-ped-status="preparando" data-id="${escapeHtml(p.id)}">Preparando</button>
+                 <button class="btn btn-primary" data-ped-status="pronto" data-id="${escapeHtml(p.id)}">Pronto</button>
+                 <button class="btn btn-primary" data-ped-status="entregue" data-id="${escapeHtml(p.id)}">Entregue</button>
+                 <button class="btn btn-danger" data-ped-status="cancelado" data-id="${escapeHtml(p.id)}">Cancelar</button>
+               </div>`
+            : ""
+        }
+      </div>
+    </div>
+  `;
+}
+
+function openPedidoDetails(pedidoId) {
+  const p = (app.data.pedidos || []).find((x) => String(x.id) === String(pedidoId));
+  if (!p) return;
+
+  openModal(renderPedidoDetailsHTML(p));
+
+  // bind botões de status dentro do modal
+  const rootModal = document.getElementById("modal-root");
+  if (!rootModal) return;
+
+  rootModal.querySelectorAll("button[data-ped-status][data-id]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      const st = btn.dataset.pedStatus;
+      btn.disabled = true;
+
+      try {
+        // se você já criou RPC set_pedido_status, use ela (mais seguro)
+        const hasRpc = true;
+        if (hasRpc && typeof sb.rpc === "function") {
+          const { error } = await sb.rpc("set_pedido_status", { p_pedido_id: id, p_status: st });
+          if (error) throw error;
+        } else {
+          // fallback (se não tiver RPC)
+          await upsertPedido({ id, status: st, cliente_id: p.cliente_id, valor: p.valor, data: p.data, cardapio_id: p.cardapio_id, observacoes: p.observacoes });
+        }
+
+        await loadPedidos();
+        renderApp();
+
+        // reabrir com dados atualizados
+        openPedidoDetails(id);
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao alterar status: " + (err?.message || err));
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+
 function toast(msg) {
   // simples (sem CSS extra)
   console.log(msg);
@@ -1221,8 +1443,9 @@ function renderDespesas() {
                             <td>${escapeHtml(d.descricao)}</td>
                             <td>${formatCurrency(d.valor)}</td>
                             <td style="white-space:nowrap;">
-                              <button class="btn btn-small btn-secondary" data-act="desp-edit" data-id="${d.id}">Editar</button>
-                              <button class="btn btn-small btn-danger" data-act="desp-del" data-id="${d.id}">Excluir</button>
+                              <button class="btn btn-small btn-secondary" data-act="ped-view" data-id="${p.id}">Detalhes</button>
+${app.role === "admin" ? `<button class="btn btn-small btn-secondary" data-act="ped-edit" data-id="${p.id}">Editar</button>` : ""}
+${app.role === "admin" ? `<button class="btn btn-small btn-danger" data-act="ped-del" data-id="${p.id}">Excluir</button>` : ""}
                             </td>
                           </tr>
                         `;
@@ -1968,6 +2191,7 @@ function bindPageEvents() {
           return;
         }
 
+        if (act === "ped-view") return openPedidoDetails(id);
         if (act === "ped-edit") return fillPedidoForm(id);
         if (act === "ped-del") {
           if (!confirm("Excluir pedido?")) return;
