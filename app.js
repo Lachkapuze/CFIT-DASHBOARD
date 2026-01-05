@@ -1435,7 +1435,7 @@ function renderDespesas() {
         </div>
         <div class="card-content">
           ${
-            app.data.despesas.length
+            (app.data.despesas || []).length
               ? `
                 <table class="table">
                   <thead>
@@ -1447,19 +1447,18 @@ function renderDespesas() {
                     </tr>
                   </thead>
                   <tbody>
-                    ${app.data.despesas
+                    ${(app.data.despesas || [])
                       .map((d) => {
                         const iso = d.data ? String(d.data).slice(0,10) : "";
                         const dataStr = iso ? iso.split("-").reverse().join("/") : "-";
                         return `
                           <tr>
                             <td>${escapeHtml(dataStr)}</td>
-                            <td>${escapeHtml(d.descricao)}</td>
-                            <td>${formatCurrency(d.valor)}</td>
+                            <td>${escapeHtml(d.descricao || "")}</td>
+                            <td>${formatCurrency(d.valor || 0)}</td>
                             <td style="white-space:nowrap;">
-                              <button class="btn btn-small btn-secondary" data-act="ped-view" data-id="${p.id}">Detalhes</button>
-${app.role === "admin" ? `<button class="btn btn-small btn-secondary" data-act="ped-edit" data-id="${p.id}">Editar</button>` : ""}
-${app.role === "admin" ? `<button class="btn btn-small btn-danger" data-act="ped-del" data-id="${p.id}">Excluir</button>` : ""}
+                              <button class="btn btn-small btn-secondary" data-act="desp-edit" data-id="${d.id}">Editar</button>
+                              <button class="btn btn-small btn-danger" data-act="desp-del" data-id="${d.id}">Excluir</button>
                             </td>
                           </tr>
                         `;
@@ -1476,16 +1475,29 @@ ${app.role === "admin" ? `<button class="btn btn-small btn-danger" data-act="ped
   `;
 }
 
+
 async function upsertDespesa(payload) {
-  if (!payload.id) payload.id = Date.now();
-  const { error } = await sb.from("despesas").upsert(payload, { onConflict: "id" });
+  const dataToSave = {
+    descricao: payload.descricao,
+    valor: Number(payload.valor || 0),
+    data: payload.data,
+  };
+
+  if (payload.id) {
+    const { error } = await sb.from("despesas").update(dataToSave).eq("id", String(payload.id));
+    if (error) throw error;
+  } else {
+    const { error } = await sb.from("despesas").insert([dataToSave]);
+    if (error) throw error;
+  }
+}
+
+
+async function deleteDespesaDB(id) {
+  const { error } = await sb.from("despesas").delete().eq("id", String(id));
   if (error) throw error;
 }
 
-async function deleteDespesaDB(id) {
-  const { error } = await sb.from("despesas").delete().eq("id", id);
-  if (error) throw error;
-}
 
 // Função para inserir ou atualizar KIT
 async function upsertKit(payload) {
