@@ -28,8 +28,14 @@
   box-sizing: border-box;
 }
 
+/* ✅ unificado (tinha duplicado 3x no final) */
 html, body {
+  width: 100%;
   height: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
@@ -40,17 +46,14 @@ html, body {
 }
 
 body {
-  margin: 0;
   width: 100%;
   min-height: 100vh;
 }
-
 
 #root {
   width: 100%;
   min-height: 100vh;
 }
-
 
 /* ===== Typography ===== */
 h1, h2, h3, h4, h5, h6 {
@@ -59,17 +62,9 @@ h1, h2, h3, h4, h5, h6 {
   margin-bottom: 0.5rem;
 }
 
-h1 {
-  font-size: 2rem;
-}
-
-h2 {
-  font-size: 1.5rem;
-}
-
-h3 {
-  font-size: 1.25rem;
-}
+h1 { font-size: 2rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
 
 p {
   line-height: 1.6;
@@ -524,13 +519,8 @@ a:hover {
 }
 
 /* ===== Utilities ===== */
-.text-center {
-  text-align: center;
-}
-
-.text-right {
-  text-align: right;
-}
+.text-center { text-align: center; }
+.text-right { text-align: right; }
 
 .mt-1 { margin-top: 0.5rem; }
 .mt-2 { margin-top: 1rem; }
@@ -547,65 +537,38 @@ a:hover {
 .p-3 { padding: 1.5rem; }
 .p-4 { padding: 2rem; }
 
-.hidden {
-  display: none !important;
-}
+.hidden { display: none !important; }
 
-.flex {
-  display: flex;
-}
-
-.flex-col {
-  flex-direction: column;
-}
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
 
 .gap-1 { gap: 0.5rem; }
 .gap-2 { gap: 1rem; }
 .gap-3 { gap: 1.5rem; }
 
-.w-full {
-  width: 100%;
-}
+.w-full { width: 100%; }
+.h-full { height: 100%; }
 
-.h-full {
-  height: 100%;
-}
-
+/* ===== Stat Colors ===== */
 .stat-card.stat-faturamento {
   border-left: 4px solid #3b82f6;
   background: rgba(59, 130, 246, 0.06);
 }
-
-.stat-card.stat-faturamento .stat-value {
-  color: #3b82f6;
-}
+.stat-card.stat-faturamento .stat-value { color: #3b82f6; }
 
 .stat-card.stat-despesas {
   border-left: 4px solid #ef4444;
   background: rgba(239, 68, 68, 0.06);
 }
-
-.stat-card.stat-despesas .stat-value {
-  color: #ef4444;
-}
+.stat-card.stat-despesas .stat-value { color: #ef4444; }
 
 .stat-card.stat-lucro {
   border-left: 4px solid #22c55e;
   background: rgba(34, 197, 94, 0.06);
 }
+.stat-card.stat-lucro .stat-value { color: #22c55e; }
 
-.stat-card.stat-lucro .stat-value {
-  color: #22c55e;
-}
-
-html, body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-}
-
-* { box-sizing: border-box; }
-
+/* ===== Topbar / app layout helpers (mantido) ===== */
 .app-screen{
   min-height: 100vh;
   width: 100%;
@@ -646,12 +609,6 @@ html, body {
 }
 
 /* FORÇA O SITE A OCUPAR A TELA TODA */
-html, body {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-}
-
 #app-screen, .app-screen {
   width: 100vw !important;
   max-width: none !important;
@@ -683,28 +640,34 @@ html, body {
   padding-top: 56px; /* espaço pro topo */
 }
 
+/* ============================================
+   ✅ CFIT FIX FINAL — LISTA DE PEDIDOS (layout)
+   ============================================ */
 
-/* ===== CFIT FIX: Tabela de Pedidos não estourar ===== */
+/* O grid precisa deixar os cards encolherem (sem isso, a tabela estoura) */
+.grid > * {
+  min-width: 0;
+}
 
-/* o card não pode estourar o grid */
+/* Card não deve forçar largura */
 .card,
 .card-content {
   min-width: 0;
 }
 
-/* permite rolagem horizontal quando a tabela for maior */
+/* Faz a tabela rolar horizontalmente SEM estourar o card */
 .card-content {
   overflow-x: auto;
 }
 
-/* tabela ocupa 100% do card */
+/* Tabela: não explodir colunas */
 .table {
   width: 100%;
-  table-layout: fixed; /* impede coluna de explodir */
+  table-layout: fixed;
   border-collapse: collapse;
 }
 
-/* corta textos grandes com "..." */
+/* Corta textos grandes (cliente, cardápio) */
 .table th,
 .table td {
   overflow: hidden;
@@ -712,20 +675,38 @@ html, body {
   white-space: nowrap;
 }
 
-/* coluna de ações: deixa os botões “compactos” e quebráveis */
+/* Ações: permite quebrar e não “puxar” a tabela */
 .table td:last-child {
-  white-space: normal; /* permite quebrar linha */
+  white-space: normal;
 }
 
-/* grupo de botões dentro da célula (Ações) */
+/* Botões em ações mais compactos */
 .table td:last-child .btn {
   margin: 2px 4px 2px 0;
 }
 
-/* no mobile, deixa a tabela rolável e evita quebrar o layout geral */
+/* Dá uma “amarrada” na coluna ações */
+.table th:last-child,
+.table td:last-child {
+  width: 200px;
+}
+
+/* Em telas menores, fica 1 coluna e evita esmagar a lista */
 @media (max-width: 900px) {
   .grid.grid-2 {
     grid-template-columns: 1fr;
   }
-}
 
+  .main-content {
+    padding: 1rem;
+  }
+
+  .header {
+    padding: 1rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.75rem;
+  }
+}
