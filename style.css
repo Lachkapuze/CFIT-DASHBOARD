@@ -683,3 +683,49 @@ html, body {
   padding-top: 56px; /* espaço pro topo */
 }
 
+
+/* ===== CFIT FIX: Tabela de Pedidos não estourar ===== */
+
+/* o card não pode estourar o grid */
+.card,
+.card-content {
+  min-width: 0;
+}
+
+/* permite rolagem horizontal quando a tabela for maior */
+.card-content {
+  overflow-x: auto;
+}
+
+/* tabela ocupa 100% do card */
+.table {
+  width: 100%;
+  table-layout: fixed; /* impede coluna de explodir */
+  border-collapse: collapse;
+}
+
+/* corta textos grandes com "..." */
+.table th,
+.table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* coluna de ações: deixa os botões “compactos” e quebráveis */
+.table td:last-child {
+  white-space: normal; /* permite quebrar linha */
+}
+
+/* grupo de botões dentro da célula (Ações) */
+.table td:last-child .btn {
+  margin: 2px 4px 2px 0;
+}
+
+/* no mobile, deixa a tabela rolável e evita quebrar o layout geral */
+@media (max-width: 900px) {
+  .grid.grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
