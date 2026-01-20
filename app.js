@@ -89,6 +89,60 @@ kit_opcoes: [],
   },
 };
 
+function showBoot(msgTitle = "Carregando CFIT...", msgSub = "Verificando acesso e preparando o painel.") {
+  let el = document.getElementById("cfit-boot");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "cfit-boot";
+    el.innerHTML = `
+      <div class="cfit-boot-box">
+        <div class="cfit-boot-spin"></div>
+        <div>
+          <div class="cfit-boot-title"></div>
+          <div class="cfit-boot-sub"></div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(el);
+
+    const css = document.createElement("style");
+    css.id = "cfit-boot-css";
+    css.textContent = `
+      #cfit-boot{
+        position:fixed; inset:0; background:rgba(255,255,255,.85);
+        display:none; align-items:flex-start; justify-content:flex-start;
+        padding:18px; z-index:99999;
+      }
+      .cfit-boot-box{
+        background:#fff; border:1px solid rgba(0,0,0,.08);
+        box-shadow:0 10px 30px rgba(0,0,0,.12);
+        border-radius:12px; padding:14px 16px;
+        display:flex; gap:12px; align-items:center; min-width:280px;
+      }
+      .cfit-boot-spin{
+        width:22px; height:22px; border-radius:999px;
+        border:3px solid rgba(0,0,0,.15);
+        border-top-color:#22c55e;
+        animation: cfitSpin .9s linear infinite;
+      }
+      .cfit-boot-title{ font-weight:800; font-size:13px; }
+      .cfit-boot-sub{ opacity:.7; font-size:12px; margin-top:2px; }
+      @keyframes cfitSpin { to { transform: rotate(360deg); } }
+    `;
+    document.head.appendChild(css);
+  }
+
+  el.querySelector(".cfit-boot-title").textContent = msgTitle;
+  el.querySelector(".cfit-boot-sub").textContent = msgSub;
+  el.style.display = "flex";
+}
+
+function hideBoot() {
+  const el = document.getElementById("cfit-boot");
+  if (el) el.style.display = "none";
+}
+
+
 // ===============================
 // 4) HELPERS
 // ===============================
@@ -437,68 +491,54 @@ function showApp() {
 }
 
 async function checkSession() {
-  // ✅ nunca deixa loader ativo antes de saber se tem sessão
-  hideBoot();
+  try {
+    const { data, error } = await sb.auth.getSession();
+    if (error) throw error;
 
-  const { data, error } = await sb.auth.getSession();
+    // sem sessão: login limpo (sem loader)
+    if (!data.session) {
+      hideBoot();
+      showLogin();
+      return;
+    }
 
-  if (error) {
-    console.error(error);
+    // com sessão: aí sim loader
+    showBoot("Carregando CFIT...", "Entrando com sua sessão salva...");
+    showApp();
+    await initAfterLogin();
+    hideBoot();
+  } catch (e) {
+    console.error(e);
+    hideBoot();
     showLogin();
-    return;
   }
-
-  // ✅ NÃO tem sessão: mostra login direto (sem loader)
-  if (!data.session) {
-    showLogin();
-    return;
-  }
-
-  // ✅ TEM sessão: aí sim carrega app (com loader)
-  showBoot();
-  showApp();
-  await initAfterLogin();
 }
 
-// ✅ LOGIN (submit do form)
-loginForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  if (loginMsg) loginMsg.textContent = "";
+if (loginForm) {
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (loginMsg) loginMsg.textContent = "";
 
-  const email = document.getElementById("login-email")?.value?.trim();
-  const password = document.getElementById("login-pass")?.value;
+    const email = document.getElementById("login-email")?.value?.trim();
+    const password = document.getElementById("login-pass")?.value;
 
-  // ✅ loader só depois de clicar Entrar
-  showBoot();
+    try {
+      showBoot("Carregando CFIT...", "Validando seu acesso...");
 
-  const { error } = await sb.auth.signInWithPassword({ email, password });
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
 
-  if (error) {
-    console.error(error);
-    hideBoot();
-    if (loginMsg) loginMsg.textContent = "Erro: " + error.message;
-    return;
-  }
-
-  showApp();
-  await initAfterLogin();
-});
-
-logoutBtn.addEventListener("click", async () => {
-  // ✅ loader opcional no logout (fica mais “polido”)
-  showBoot();
-  await sb.auth.signOut();
-  hideBoot();
-  showLogin();
-});
-
-// Se sessão expirar, reage (e garante que some loader)
-sb.auth.onAuthStateChange((_event, session) => {
-  if (!session) {
-    hideBoot();
-    showLogin();
-  }
-});
+      showApp();
+      await initAfterLogin();
+      hideBoot();
+    } catch (err) {
+      console.error(err);
+      hideBoot();
+      showLogin();
+      if (loginMsg) loginMsg.textContent = "Erro: " + (err?.message || err);
+    }
+  });
+}
 
 
 // ===============================
@@ -602,38 +642,31 @@ async function loadAllData() {
 // ===============================
 async function initAfterLogin() {
   try {
-    showBoot(); // ✅ sempre mostra carregando aqui
-
-    // pega role
+    // 1) pega role
     app.role = await getMyRole();
     document.body.classList.toggle("role-cozinha", app.role === "cozinha");
 
-    // trava a cozinha em pedidos
+    // 2) cozinha fica travada em pedidos
     if (app.role === "cozinha") app.currentPage = "pedidos";
 
-    // filtro padrão do dashboard
+    // 3) filtro padrão
     if (!app.filtro.dashboardIni) app.filtro.dashboardIni = startOfMonthISO();
     if (!app.filtro.dashboardFim) app.filtro.dashboardFim = todayISO();
 
-    // carrega dados conforme role
+    // 4) carrega dados ANTES de renderizar
     if (app.role === "cozinha") {
       await Promise.all([loadPedidos(), loadClientes(), loadCardapios(), loadCardapioItens()]);
     } else {
       await loadAllData();
     }
 
-    // renderiza já com dados prontos
+    // 5) agora renderiza
     renderApp();
-
-    hideBoot(); // ✅ some só depois que carregou tudo
   } catch (e) {
     console.error("Erro initAfterLogin:", e);
     hideBoot();
-    alert(
-      "Erro ao carregar do Supabase.\n\nDetalhe: " +
-        (e?.message || e)
-    );
     showLogin();
+    if (loginMsg) loginMsg.textContent = "Erro: " + (e?.message || e);
   }
 }
 
