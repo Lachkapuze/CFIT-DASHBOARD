@@ -532,8 +532,13 @@ async function initAfterLogin() {
   try {
     // pega role
     app.role = await getMyRole();
-    document.body.classList.toggle("role-cozinha", app.role === "cozinha");
+document.body.classList.toggle("role-cozinha", app.role === "cozinha");
 
+// agora pode mostrar o app (sem flash)
+bootDone();
+
+// e aí renderiza
+renderApp();
 
     // trava a cozinha em "pedidos"
     if (app.role === "cozinha") app.currentPage = "pedidos";
