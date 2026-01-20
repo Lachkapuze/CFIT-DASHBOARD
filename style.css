@@ -797,4 +797,48 @@ a:hover {
   width: 100% !important;
 }
 
+/* ==============================
+   COZINHA: layout cheio
+   ============================== */
+
+/* garante que o conteúdo use a tela */
+.main-content {
+  width: calc(100vw - 250px) !important;
+  max-width: none !important;
+}
+
+.container {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+/* quando estiver no modo cozinha, vamos deixar o card maior */
+body.role-cozinha .main-content .grid.grid-2,
+body.role-cozinha .main-content .grid {
+  grid-template-columns: 1fr !important;
+}
+
+/* card ocupa toda a largura */
+body.role-cozinha .card {
+  width: 100%;
+}
+
+/* tabela da cozinha fica mais “aberta” */
+body.role-cozinha .table {
+  table-layout: auto !important;
+}
+
+/* deixa a tabela respirar */
+body.role-cozinha .table th,
+body.role-cozinha .table td {
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+/* ações não precisa ficar gigante na cozinha */
+body.role-cozinha .table th:last-child,
+body.role-cozinha .table td:last-child {
+  width: 140px;
+}
 
