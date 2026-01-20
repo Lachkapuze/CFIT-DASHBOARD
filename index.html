@@ -8,10 +8,14 @@
   <style>
   /* trava o app até o JS liberar */
   html { background: #f9fafb; }
-  body.app-booting #app-screen,
-  body.app-booting .app-screen,
-  body.app-booting #root {
-    display: none !important;
+ /* esconde só o painel (app), não o login */
+body.app-booting .app-root,
+body.app-booting .main-content,
+body.app-booting .sidebar,
+body.app-booting .topbar {
+  visibility: hidden !important;
+}
+
   }
 
   /* loader */
