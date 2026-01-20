@@ -532,6 +532,8 @@ async function initAfterLogin() {
   try {
     // pega role
     app.role = await getMyRole();
+    document.body.classList.toggle("role-cozinha", app.role === "cozinha");
+
 
     // trava a cozinha em "pedidos"
     if (app.role === "cozinha") app.currentPage = "pedidos";
