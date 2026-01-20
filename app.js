@@ -1045,7 +1045,8 @@ function renderPedidos() {
                       .map((p) => {
                         const iso = p.data ? String(p.data).slice(0,10) : "";
                         const dataStr = iso ? iso.split("-").reverse().join("/") : "-";
-                        const nomeCli = p.cliente_nome || p.clienteNome || "";
+                        const cliObj = (app.data.clientes || []).find(c => String(c.id) === String(p.cliente_id));
+                        const nomeCli = cliObj?.nome || p.cliente_nome || p.clienteNome || "-";
                         const nomeCard = cardapioNomeById(p.cardapio_id);
                         return `
                           <tr>
