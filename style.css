@@ -710,3 +710,87 @@ a:hover {
     padding: 0.75rem;
   }
 }
+
+/* ============================================
+   ✅ CFIT FIX — ocupar a tela toda (sem “margem vazia”)
+   ============================================ */
+
+/* Se existir algum wrapper tipo .container envolvendo o app,
+   isso aqui força a largura total dentro do painel */
+.main-content,
+.app-root,
+#root,
+#app-screen,
+.app-screen {
+  max-width: none !important;
+}
+
+/* A main-content já tem margin-left da sidebar,
+   então ela pode ser 100% do resto da tela */
+.main-content {
+  width: calc(100vw - 250px) !important;
+  max-width: none !important;
+}
+
+/* Evita “apertar” os cards com padding gigante */
+.main-content {
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+/* ============================================
+   ✅ CFIT FIX — Pedidos: grid com proporção boa
+   (form menor, lista maior)
+   ============================================ */
+
+/* Só afeta a área dos cards dentro do conteúdo */
+.main-content .grid.grid-2 {
+  grid-template-columns: minmax(420px, 520px) minmax(520px, 1fr);
+  align-items: start;
+}
+
+/* Quando a tela for menor, volta a 1 coluna */
+@media (max-width: 1100px) {
+  .main-content .grid.grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================
+   ✅ CFIT FIX — Tabela mais “respirada” sem estourar
+   ============================================ */
+
+/* Remove o "table-layout: fixed" só pra tabela de pedidos,
+   porque ele esmagava as colunas (ficava tudo “D... Cli...”).
+   Mantém o overflow pra não estourar. */
+.main-content .card-content .table {
+  table-layout: auto;
+}
+
+/* Mantém proteção contra estouro (continua sem explodir) */
+.main-content .card-content {
+  overflow-x: auto;
+}
+
+/* Ajuste fino: títulos e células com um pouco menos de corte */
+.main-content .table th,
+.main-content .table td {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+/* Coluna de ações: largura mínima ok pra 3 botões */
+.main-content .table th:last-child,
+.main-content .table td:last-child {
+  width: 260px;
+  white-space: nowrap;
+}
+
+/* Botões em ações compactos e alinhados */
+.main-content .table td:last-child .btn {
+  padding: 0.45rem 0.85rem;
+  font-size: 0.85rem;
+}
+
+
