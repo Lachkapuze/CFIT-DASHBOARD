@@ -20,6 +20,33 @@ const loginMsg = document.getElementById("login-msg");
 const logoutBtn = document.getElementById("logout-btn");
 const root = document.getElementById("root");
 
+// ===============================
+// BOOT SCREEN (Carregando CFIT)
+// ===============================
+function showBoot() {
+  let el = document.getElementById("boot-screen");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "boot-screen";
+    el.innerHTML = `
+      <div class="boot-card">
+        <div class="boot-spin"></div>
+        <div>
+          <div class="boot-title">Carregando CFIT...</div>
+          <div class="boot-sub">Verificando acesso e preparando o painel.</div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(el);
+  }
+  el.style.display = "flex";
+}
+
+function hideBoot() {
+  const el = document.getElementById("boot-screen");
+  if (el) el.style.display = "none";
+}
+
 // Se algum ID sumiu, para aqui com aviso
 (function assertIds() {
   const missing = [];
@@ -371,6 +398,28 @@ async function getMyRole() {
   }
 
   return data?.role || "admin";
+}
+
+// ===============================
+// LOADER (BOOT)
+// ===============================
+function bootShow(msg1 = "Carregando CFIT…", msg2 = "Verificando acesso e preparando o painel.") {
+  const loader = document.getElementById("boot-loader");
+  if (!loader) return;
+
+  const t = loader.querySelector(".boot-title");
+  const s = loader.querySelector(".boot-sub");
+  if (t) t.textContent = msg1;
+  if (s) s.textContent = msg2;
+
+  loader.style.display = "flex";
+  document.body.classList.add("app-booting");
+}
+
+function bootDone() {
+  const loader = document.getElementById("boot-loader");
+  if (loader) loader.style.display = "none";
+  document.body.classList.remove("app-booting");
 }
 
 
