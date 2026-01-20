@@ -497,22 +497,21 @@ async function checkSession() {
 
     // sem sessão: login limpo (sem loader)
     if (!data.session) {
-      hideBoot();
+      hideBoot();      // garante que não sobrou loader
       showLogin();
       return;
     }
 
-    // com sessão: aí sim loader
-    showBoot("Carregando CFIT...", "Entrando com sua sessão salva...");
+    // com sessão: entra no app e deixa initAfterLogin controlar loader
     showApp();
-    await initAfterLogin();
-    hideBoot();
+    await initAfterLogin();  // (initAfterLogin agora faz showBoot + hideBoot)
   } catch (e) {
     console.error(e);
     hideBoot();
     showLogin();
   }
 }
+
 
 if (loginForm) {
   loginForm.addEventListener("submit", async (e) => {
@@ -523,14 +522,12 @@ if (loginForm) {
     const password = document.getElementById("login-pass")?.value;
 
     try {
-      showBoot("Carregando CFIT...", "Validando seu acesso...");
-
+      // aqui NÃO chama showBoot, porque initAfterLogin já vai chamar
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) throw error;
 
       showApp();
-      await initAfterLogin();
-      hideBoot();
+      await initAfterLogin(); // (initAfterLogin faz showBoot + hideBoot)
     } catch (err) {
       console.error(err);
       hideBoot();
@@ -538,6 +535,14 @@ if (loginForm) {
       if (loginMsg) loginMsg.textContent = "Erro: " + (err?.message || err);
     }
   });
+}
+
+function showBoot() {
+  document.body.classList.add("app-booting");
+}
+
+function hideBoot() {
+  document.body.classList.remove("app-booting");
 }
 
 
@@ -642,6 +647,9 @@ async function loadAllData() {
 // ===============================
 async function initAfterLogin() {
   try {
+    // garante loader durante o carregamento
+    showBoot();
+
     // 1) pega role
     app.role = await getMyRole();
     document.body.classList.toggle("role-cozinha", app.role === "cozinha");
@@ -649,23 +657,34 @@ async function initAfterLogin() {
     // 2) cozinha fica travada em pedidos
     if (app.role === "cozinha") app.currentPage = "pedidos";
 
-    // 3) filtro padrão
+    // 3) filtro padrão (admin)
     if (!app.filtro.dashboardIni) app.filtro.dashboardIni = startOfMonthISO();
     if (!app.filtro.dashboardFim) app.filtro.dashboardFim = todayISO();
 
     // 4) carrega dados ANTES de renderizar
     if (app.role === "cozinha") {
-      await Promise.all([loadPedidos(), loadClientes(), loadCardapios(), loadCardapioItens()]);
+      await Promise.all([
+        loadPedidos(),
+        loadClientes(),
+        loadCardapios(),
+        loadCardapioItens(),
+      ]);
     } else {
       await loadAllData();
     }
 
-    // 5) agora renderiza
+    // 5) renderiza
     renderApp();
+
+    // 6) pronto: some loader
+    hideBoot();
   } catch (e) {
     console.error("Erro initAfterLogin:", e);
+
+    // some loader e volta pro login
     hideBoot();
     showLogin();
+
     if (loginMsg) loginMsg.textContent = "Erro: " + (e?.message || e);
   }
 }
