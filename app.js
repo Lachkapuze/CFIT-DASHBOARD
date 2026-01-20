@@ -437,20 +437,30 @@ function showApp() {
 }
 
 async function checkSession() {
+  // ✅ nunca deixa loader ativo antes de saber se tem sessão
+  hideBoot();
+
   const { data, error } = await sb.auth.getSession();
+
   if (error) {
     console.error(error);
     showLogin();
     return;
   }
+
+  // ✅ NÃO tem sessão: mostra login direto (sem loader)
   if (!data.session) {
     showLogin();
     return;
   }
+
+  // ✅ TEM sessão: aí sim carrega app (com loader)
+  showBoot();
   showApp();
   await initAfterLogin();
 }
 
+// ✅ LOGIN (submit do form)
 loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (loginMsg) loginMsg.textContent = "";
@@ -458,8 +468,14 @@ loginForm.addEventListener("submit", async (e) => {
   const email = document.getElementById("login-email")?.value?.trim();
   const password = document.getElementById("login-pass")?.value;
 
+  // ✅ loader só depois de clicar Entrar
+  showBoot();
+
   const { error } = await sb.auth.signInWithPassword({ email, password });
+
   if (error) {
+    console.error(error);
+    hideBoot();
     if (loginMsg) loginMsg.textContent = "Erro: " + error.message;
     return;
   }
@@ -469,14 +485,21 @@ loginForm.addEventListener("submit", async (e) => {
 });
 
 logoutBtn.addEventListener("click", async () => {
+  // ✅ loader opcional no logout (fica mais “polido”)
+  showBoot();
   await sb.auth.signOut();
+  hideBoot();
   showLogin();
 });
 
-// Se sessão expirar, reage
+// Se sessão expirar, reage (e garante que some loader)
 sb.auth.onAuthStateChange((_event, session) => {
-  if (!session) showLogin();
+  if (!session) {
+    hideBoot();
+    showLogin();
+  }
 });
+
 
 // ===============================
 // 6) LOAD (SUPABASE -> app.data)
@@ -579,37 +602,38 @@ async function loadAllData() {
 // ===============================
 async function initAfterLogin() {
   try {
+    showBoot(); // ✅ sempre mostra carregando aqui
+
     // pega role
     app.role = await getMyRole();
-document.body.classList.toggle("role-cozinha", app.role === "cozinha");
+    document.body.classList.toggle("role-cozinha", app.role === "cozinha");
 
-// agora pode mostrar o app (sem flash)
-bootDone();
-
-// e aí renderiza
-renderApp();
-
-    // trava a cozinha em "pedidos"
+    // trava a cozinha em pedidos
     if (app.role === "cozinha") app.currentPage = "pedidos";
 
-    // filtro padrão
+    // filtro padrão do dashboard
     if (!app.filtro.dashboardIni) app.filtro.dashboardIni = startOfMonthISO();
     if (!app.filtro.dashboardFim) app.filtro.dashboardFim = todayISO();
 
-    // carrega só o que cada role precisa
+    // carrega dados conforme role
     if (app.role === "cozinha") {
       await Promise.all([loadPedidos(), loadClientes(), loadCardapios(), loadCardapioItens()]);
     } else {
       await loadAllData();
     }
 
+    // renderiza já com dados prontos
     renderApp();
+
+    hideBoot(); // ✅ some só depois que carregou tudo
   } catch (e) {
     console.error("Erro initAfterLogin:", e);
+    hideBoot();
     alert(
-      "Erro ao carregar do Supabase. Provável: RLS/Policies bloqueando ou nome de coluna/tabela diferente.\n\nDetalhe: " +
+      "Erro ao carregar do Supabase.\n\nDetalhe: " +
         (e?.message || e)
     );
+    showLogin();
   }
 }
 
