@@ -1074,83 +1074,93 @@ function renderPedidos() {
     return c ? c.nome : "-";
   };
 
+  const pedidosAll = (app.data.pedidos || []);
+
+  const pedidosEntregues = pedidosAll.filter(p =>
+    String(p.status || "").toLowerCase() === "entregue"
+  );
+
+  const pedidosAndamento = pedidosAll.filter(p =>
+    String(p.status || "").toLowerCase() !== "entregue"
+  );
+
   return `
     <h2>Pedidos</h2>
 
     <div class="grid grid-2" style="margin-top:1.25rem;">
 
-  ${app.role === "admin" ? `
-  <div class="card">
-    <div class="card-header">
-      <h3 class="card-title" id="ped-title">Novo Pedido</h3>
-    </div>
-
-    <div class="card-content">
-      <form id="ped-form">
-        <input type="hidden" id="ped-id" />
-        <input type="hidden" id="ped-mult" value="1" />
-
-        <div class="form-group">
-          <label class="form-label">Cliente</label>
-          <select class="form-input" id="ped-cliente">
-            <option value="">Selecione</option>
-            ${clientesOptions}
-          </select>
+      ${app.role === "admin" ? `
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title" id="ped-title">Novo Pedido</h3>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Cardápio (7 marmitas)</label>
-          <select class="form-input" id="ped-cardapio">
-            <option value="">Selecione o cardápio</option>
-            ${cardapiosOptions}
-          </select>
-        </div>
+        <div class="card-content">
+          <form id="ped-form">
+            <input type="hidden" id="ped-id" />
+            <input type="hidden" id="ped-mult" value="1" />
 
-        <div class="form-group">
-          <label class="form-label">Observações (opcional)</label>
-          <textarea class="form-input" id="ped-obs" rows="3" placeholder="Ex: Sem cebola, trocar arroz por batata, etc..."></textarea>
-        </div>
+            <div class="form-group">
+              <label class="form-label">Cliente</label>
+              <select class="form-input" id="ped-cliente">
+                <option value="">Selecione</option>
+                ${clientesOptions}
+              </select>
+            </div>
 
-        <div class="form-group">
-          <label class="form-label">Valor (R$)</label>
-          <input class="form-input" id="ped-valor" type="number" step="0.01" placeholder="Ex: 105.00">
-        </div>
+            <div class="form-group">
+              <label class="form-label">Cardápio (7 marmitas)</label>
+              <select class="form-input" id="ped-cardapio">
+                <option value="">Selecione o cardápio</option>
+                ${cardapiosOptions}
+              </select>
+            </div>
 
-        <div class="form-group">
-          <label class="form-label">Data</label>
-          <input class="form-input" id="ped-data" type="date" value="${todayISO()}">
-        </div>
+            <div class="form-group">
+              <label class="form-label">Observações (opcional)</label>
+              <textarea class="form-input" id="ped-obs" rows="3" placeholder="Ex: Sem cebola, trocar arroz por batata, etc..."></textarea>
+            </div>
 
-        <div class="form-group">
-          <label class="form-label">Status</label>
-          <select class="form-input" id="ped-status">
-            <option value="Recebido">Recebido</option>
-            <option value="Preparando">Preparando</option>
-            <option value="Pronto">Pronto</option>
-            <option value="Entregue">Entregue</option>
-            <option value="Cancelado">Cancelado</option>
-          </select>
-        </div>
+            <div class="form-group">
+              <label class="form-label">Valor (R$)</label>
+              <input class="form-input" id="ped-valor" type="number" step="0.01" placeholder="Ex: 105.00">
+            </div>
 
-        <!-- ✅ BOTÕES RÁPIDOS 7/14/28 -->
-        <div class="flex gap-2" style="margin-bottom:.75rem;">
-          <button class="btn btn-secondary btn-block" type="button" id="ped-mult-1">7 (1 kit)</button>
-          <button class="btn btn-secondary btn-block" type="button" id="ped-mult-2">14 (2 kits)</button>
-          <button class="btn btn-secondary btn-block" type="button" id="ped-mult-4">28 (4 kits)</button>
-        </div>
+            <div class="form-group">
+              <label class="form-label">Data</label>
+              <input class="form-input" id="ped-data" type="date" value="${todayISO()}">
+            </div>
 
-        <div class="flex gap-2">
-          <button class="btn btn-primary btn-block" type="submit" id="ped-submit">Salvar</button>
-          <button class="btn btn-secondary btn-block" type="button" id="ped-reset">Limpar</button>
-        </div>
+            <div class="form-group">
+              <label class="form-label">Status</label>
+              <select class="form-input" id="ped-status">
+                <option value="Recebido">Recebido</option>
+                <option value="Preparando">Preparando</option>
+                <option value="Pronto">Pronto</option>
+                <option value="Entregue">Entregue</option>
+                <option value="Cancelado">Cancelado</option>
+              </select>
+            </div>
 
-        <div style="margin-top:.6rem; opacity:.75; font-size:12px;">
-          Dica: 14 e 28 criam automaticamente 2 ou 4 pedidos iguais (cada um = 7 marmitas).
+            <!-- ✅ BOTÕES RÁPIDOS 7/14/28 -->
+            <div class="flex gap-2" style="margin-bottom:.75rem;">
+              <button class="btn btn-secondary btn-block" type="button" id="ped-mult-1">7 (1 kit)</button>
+              <button class="btn btn-secondary btn-block" type="button" id="ped-mult-2">14 (2 kits)</button>
+              <button class="btn btn-secondary btn-block" type="button" id="ped-mult-4">28 (4 kits)</button>
+            </div>
+
+            <div class="flex gap-2">
+              <button class="btn btn-primary btn-block" type="submit" id="ped-submit">Salvar</button>
+              <button class="btn btn-secondary btn-block" type="button" id="ped-reset">Limpar</button>
+            </div>
+
+            <div style="margin-top:.6rem; opacity:.75; font-size:12px;">
+              Dica: 14 e 28 criam automaticamente 2 ou 4 pedidos iguais (cada um = 7 marmitas).
+            </div>
+          </form>
         </div>
-      </form>
-    </div>
-  </div>
-  ` : ""}
+      </div>
+      ` : ""}
 
       <div class="card">
         <div class="card-header">
@@ -1158,61 +1168,135 @@ function renderPedidos() {
         </div>
 
         <div class="card-content">
-          ${
-            (app.data.pedidos || []).length
-              ? `
-                <table class="table">
-                  <thead>
-                    <tr>
-                      <th>Data</th>
-                      <th>Cliente</th>
-                      <th>Cardápio</th>
-                      ${app.role === "admin" ? "<th>Valor</th>" : ""}
-                      <th>Status</th>
-                      <th>Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${(app.data.pedidos || [])
-                      .map((p) => {
-                        const iso = p.data ? String(p.data).slice(0,10) : "";
-                        const dataStr = iso ? iso.split("-").reverse().join("/") : "-";
-                        const cliObj = (app.data.clientes || []).find(c => String(c.id) === String(p.cliente_id));
-                        const nomeCli = cliObj?.nome || p.cliente_nome || p.clienteNome || "-";
-                        const nomeCard = cardapioNomeById(p.cardapio_id);
-                        return `
-                          <tr>
-                            <td>${escapeHtml(dataStr)}</td>
-                            <td>${escapeHtml(nomeCli)}</td>
-                            <td>${escapeHtml(nomeCard)}</td>
-                            ${app.role === "admin" ? `<td>${formatCurrency(p.valor)}</td>` : ""}
-                            <td>${escapeHtml(p.status)}</td>
-                            <td style="white-space:nowrap;">
-  <button class="btn btn-small btn-secondary" data-act="ped-view" data-id="${p.id}">Detalhes</button>
-  ${app.role === "admin" ? `<button class="btn btn-small btn-secondary" data-act="ped-edit" data-id="${p.id}">Editar</button>` : ""}
-  ${app.role === "admin" ? `<button class="btn btn-small btn-danger" data-act="ped-del" data-id="${p.id}">Excluir</button>` : ""}
-</td>
-                          </tr>
-                          ${
-                            p.observacoes
-                              ? `<tr><td colspan="6" style="opacity:.8; font-size:12px; padding-top:0;">
-                                   <strong>Obs:</strong> ${escapeHtml(String(p.observacoes).slice(0, 160))}
-                                 </td></tr>`
-                              : ""
-                          }
-                        `;
-                      })
-                      .join("")}
-                  </tbody>
-                </table>
-              `
-              : `<div style="opacity:.7;">Nenhum pedido cadastrado.</div>`
-          }
+
+          <!-- =========================
+               PEDIDOS EM ANDAMENTO
+               ========================= -->
+          <div style="margin-bottom:18px;">
+            <h3 style="margin:0 0 10px;">📦 Em andamento</h3>
+
+            ${
+              (pedidosAndamento || []).length
+                ? `
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>Data</th>
+                        <th>Cliente</th>
+                        <th>Cardápio</th>
+                        ${app.role === "admin" ? "<th>Valor</th>" : ""}
+                        <th>Status</th>
+                        <th>Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${(pedidosAndamento || [])
+                        .map((p) => {
+                          const iso = p.data ? String(p.data).slice(0,10) : "";
+                          const dataStr = iso ? iso.split("-").reverse().join("/") : "-";
+                          const cliObj = (app.data.clientes || []).find(c => String(c.id) === String(p.cliente_id));
+                          const nomeCli = cliObj?.nome || p.cliente_nome || p.clienteNome || "-";
+                          const nomeCard = cardapioNomeById(p.cardapio_id);
+
+                          return `
+                            <tr>
+                              <td>${escapeHtml(dataStr)}</td>
+                              <td>${escapeHtml(nomeCli)}</td>
+                              <td>${escapeHtml(nomeCard)}</td>
+                              ${app.role === "admin" ? `<td>${formatCurrency(p.valor)}</td>` : ""}
+                              <td>${escapeHtml(p.status)}</td>
+                              <td style="white-space:nowrap;">
+                                <button class="btn btn-small btn-secondary" data-act="ped-view" data-id="${p.id}">Detalhes</button>
+                                ${app.role === "admin" ? `<button class="btn btn-small btn-secondary" data-act="ped-edit" data-id="${p.id}">Editar</button>` : ""}
+                                ${app.role === "admin" ? `<button class="btn btn-small btn-danger" data-act="ped-del" data-id="${p.id}">Excluir</button>` : ""}
+                              </td>
+                            </tr>
+                            ${
+                              p.observacoes
+                                ? `<tr>
+                                     <td colspan="${app.role === "admin" ? "6" : "5"}" style="opacity:.8; font-size:12px; padding-top:0;">
+                                       <strong>Obs:</strong> ${escapeHtml(String(p.observacoes).slice(0, 160))}
+                                     </td>
+                                   </tr>`
+                                : ""
+                            }
+                          `;
+                        })
+                        .join("")}
+                    </tbody>
+                  </table>
+                `
+                : `<div style="opacity:.7;">Nenhum pedido em andamento.</div>`
+            }
+          </div>
+
+          <!-- =========================
+               PEDIDOS ENTREGUES
+               ========================= -->
+          <div style="margin-top:10px;">
+            <h3 style="margin:0 0 10px;">✅ Pedidos Entregues</h3>
+
+            ${
+              (pedidosEntregues || []).length
+                ? `
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>Data</th>
+                        <th>Cliente</th>
+                        <th>Cardápio</th>
+                        ${app.role === "admin" ? "<th>Valor</th>" : ""}
+                        <th>Status</th>
+                        <th>Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${(pedidosEntregues || [])
+                        .map((p) => {
+                          const iso = p.data ? String(p.data).slice(0,10) : "";
+                          const dataStr = iso ? iso.split("-").reverse().join("/") : "-";
+                          const cliObj = (app.data.clientes || []).find(c => String(c.id) === String(p.cliente_id));
+                          const nomeCli = cliObj?.nome || p.cliente_nome || p.clienteNome || "-";
+                          const nomeCard = cardapioNomeById(p.cardapio_id);
+
+                          return `
+                            <tr>
+                              <td>${escapeHtml(dataStr)}</td>
+                              <td>${escapeHtml(nomeCli)}</td>
+                              <td>${escapeHtml(nomeCard)}</td>
+                              ${app.role === "admin" ? `<td>${formatCurrency(p.valor)}</td>` : ""}
+                              <td>${escapeHtml(p.status)}</td>
+                              <td style="white-space:nowrap;">
+                                <button class="btn btn-small btn-secondary" data-act="ped-view" data-id="${p.id}">Detalhes</button>
+                                ${app.role === "admin" ? `<button class="btn btn-small btn-danger" data-act="ped-del" data-id="${p.id}">Excluir</button>` : ""}
+                              </td>
+                            </tr>
+                            ${
+                              p.observacoes
+                                ? `<tr>
+                                     <td colspan="${app.role === "admin" ? "6" : "5"}" style="opacity:.8; font-size:12px; padding-top:0;">
+                                       <strong>Obs:</strong> ${escapeHtml(String(p.observacoes).slice(0, 160))}
+                                     </td>
+                                   </tr>`
+                                : ""
+                            }
+                          `;
+                        })
+                        .join("")}
+                    </tbody>
+                  </table>
+                `
+                : `<div style="opacity:.7;">Nenhum pedido entregue ainda.</div>`
+            }
+          </div>
+
         </div>
       </div>
+
     </div>
   `;
 }
+
 
 
 function renderKits() {
